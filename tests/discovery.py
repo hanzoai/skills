@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "public"
 BASE = sys.argv[2].rstrip("/") if len(sys.argv) > 2 else None
 NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-DOCS = ["auth.md", ".well-known/api-catalog", ".well-known/mcp/server-card.json",
+DOCS = ["auth.md", "CLAUDE.md", "AGENTS.md", "oss/index.md", ".well-known/api-catalog", ".well-known/mcp/server-card.json",
         ".well-known/agent-skills/index.json"]
 
 failed = 0
@@ -143,6 +143,30 @@ ok("tier2 skills: sampled SKILL.md and .json exist and match flat .md", not bad_
 index_html = read("index.html")
 ok("tier0 index.html: compact (< 100 KB, no eager skill dump)",
    len(index_html) < 102400 and b'class="row"' not in index_html, "%d bytes" % len(index_html))
+
+claude_raw = read("CLAUDE.md")
+claude_text = claude_raw.decode("utf-8")
+agents_raw = read("AGENTS.md")
+ok("tier0 CLAUDE.md: compact (< 8 KB) and teaches progressive install + Forge OSS",
+   500 < len(claude_raw) < 8192 and "https://hanzoskills.com/llms.txt" in claude_text
+   and "https://hanzoskills.com/oss/index.md" in claude_text and "https://forge.hanzo.ai" in claude_text
+   and "https://docs.hanzo.ai/docs/skills" in claude_text,
+   "%d bytes" % len(claude_raw))
+ok("tier0 AGENTS.md: matches CLAUDE.md bytes", agents_raw == claude_raw)
+
+oss_md = read("oss/index.md").decode("utf-8")
+oss_idx = json.loads(read("oss/index.json"))
+oss_orgs = oss_idx.get("orgs") or []
+ok("tier0 oss/index.md: compact (< 16 KB) progressive Forge OSS directory",
+   500 < len(oss_md.encode("utf-8")) < 16384 and "https://forge.hanzo.ai" in oss_md,
+   "%d bytes" % len(oss_md.encode("utf-8")))
+ok("tier0 oss/index.json: covers Forge public OSS orgs",
+   oss_idx.get("total_public_repos", 0) >= 2000 and len(oss_orgs) >= 50,
+   "%d repos across %d orgs" % (oss_idx.get("total_public_repos", 0), len(oss_orgs)))
+missing_oss = [o["org"] for o in oss_orgs[:10]
+               if not (os.path.isfile(os.path.join(ROOT, o["json"].lstrip("/")))
+                       and os.path.isfile(os.path.join(ROOT, o["md"].lstrip("/"))))]
+ok("tier1 oss/<org>: sampled org json & md files exist", not missing_oss, ", ".join(missing_oss))
 
 if BASE:
     for rel in DOCS:

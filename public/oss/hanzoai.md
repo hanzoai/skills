@@ -1,0 +1,581 @@
+# hanzoai — Forge OSS Repositories (569)
+
+> Progressive Tier-1 repository index for `hanzoai` on [forge.hanzo.ai/hanzoai](https://forge.hanzo.ai/hanzoai).
+> Load only the repository you need. Install Hanzo skills progressively via [CLAUDE.md](https://hanzoskills.com/CLAUDE.md).
+
+```bash
+git clone https://forge.hanzo.ai/hanzoai/<repo>.git
+curl -fsSL https://hanzoskills.com/CLAUDE.md >> CLAUDE.md
+```
+
+## Repositories
+
+- [`hanzoai/a`](https://forge.hanzo.ai/hanzoai/a) — Embeddable widget loader for adding Hanzo chat, analytics, or checkout to any site with one script tag.
+- [`hanzoai/account`](https://forge.hanzo.ai/hanzoai/account) — pull mirror of github.com/hanzoai/account
+- [`hanzoai/account-sdk`](https://forge.hanzo.ai/hanzoai/account-sdk)
+- [`hanzoai/aci`](https://forge.hanzo.ai/hanzoai/aci) — Agent-computer interface providing code editing and linting tools for AI coding agents.
+- [`hanzoai/act`](https://forge.hanzo.ai/hanzoai/act) — Hanzo act
+- [`hanzoai/actions-proto-go`](https://forge.hanzo.ai/hanzoai/actions-proto-go) — Backup of git.hanzo.ai/hanzo/actions-proto-go (canonical on git.hanzo.ai)
+- [`hanzoai/ads`](https://forge.hanzo.ai/hanzoai/ads) — Mirror of github.com/hanzoai/ads
+- [`hanzoai/age`](https://forge.hanzo.ai/hanzoai/age) — A simple, modern and secure encryption tool (and Go library) with small explicit keys, no config options, and UNIX-style composability.
+- [`hanzoai/agency`](https://forge.hanzo.ai/hanzoai/agency)
+- [`hanzoai/agent`](https://forge.hanzo.ai/hanzoai/agent) — Multi-agent SDK with OpenAI-compatible API
+- [`hanzoai/agents`](https://forge.hanzo.ai/hanzoai/agents)
+- [`hanzoai/ai`](https://forge.hanzo.ai/hanzoai/ai) — Hanzo AI — LLM control plane, RAG, and model hub. Native Go routing for 66+ models over an OpenAI-compatible /v1 API; mounts as the 'ai' subsystem inside hanzoai/cloud.
+- [`hanzoai/aidocs`](https://forge.hanzo.ai/hanzoai/aidocs) — AI documentation
+- [`hanzoai/akasha`](https://forge.hanzo.ai/hanzoai/akasha) — JavaScript library for cross-browser storage with automatic cookie-based fallback.
+- [`hanzoai/aml`](https://forge.hanzo.ai/hanzoai/aml) — Hanzo AML — white-label AML/CFT monitoring over the luxfi/aml engine
+- [`hanzoai/amqp`](https://forge.hanzo.ai/hanzoai/amqp)
+- [`hanzoai/analytics`](https://forge.hanzo.ai/hanzoai/analytics) — Hanzo Analytics - Privacy-focused web analytics platform
+- [`hanzoai/ANE`](https://forge.hanzo.ai/hanzoai/ANE) — Research project for training neural networks on Apple's Neural Engine via private APIs.
+- [`hanzoai/annotations`](https://forge.hanzo.ai/hanzoai/annotations) — Restored from the DigitalOcean evacuation
+- [`hanzoai/anomalib`](https://forge.hanzo.ai/hanzoai/anomalib) — Python library for developing, benchmarking, and deploying deep learning anomaly detection models.
+- [`hanzoai/apiclient`](https://forge.hanzo.ai/hanzoai/apiclient)
+- [`hanzoai/app`](https://forge.hanzo.ai/hanzoai/app) — The Hanzo workspace app standard — @hanzo/app
+- [`hanzoai/apple-health-mcp-server`](https://forge.hanzo.ai/hanzoai/apple-health-mcp-server) — MCP server that indexes Apple Health XML exports in Elasticsearch for natural-language queries.
+- [`hanzoai/ast`](https://forge.hanzo.ai/hanzoai/ast) — Incremental parsing library and parser generator for source code syntax trees.
+- [`hanzoai/attendant`](https://forge.hanzo.ai/hanzoai/attendant) — Voice agent that joins meetings, transcribes whoever is speaking, and answers aloud.
+- [`hanzoai/auth`](https://forge.hanzo.ai/hanzoai/auth) — Next.js template demonstrating OIDC authentication and user info retrieval via ZITADEL.
+- [`hanzoai/authorizenet-go`](https://forge.hanzo.ai/hanzoai/authorizenet-go) — Authorize.net Go client with AIM, CIM and ARB support.
+- [`hanzoai/authz`](https://forge.hanzo.ai/hanzoai/authz) — Hanzo Authz — access control library for Go: ACL, RBAC, ABAC policy enforcement
+- [`hanzoai/authzstore`](https://forge.hanzo.ai/hanzoai/authzstore) — Xorm storage adapter for Hanzo's authz policy persistence.
+- [`hanzoai/autogui`](https://forge.hanzo.ai/hanzoai/autogui) — Cross-platform GUI automation library for controlling the mouse and keyboard from Python.
+- [`hanzoai/autoprefixer`](https://forge.hanzo.ai/hanzoai/autoprefixer) — Parse CSS and add vendor prefixes to rules by Can I Use
+- [`hanzoai/axum-test-helper`](https://forge.hanzo.ai/hanzoai/axum-test-helper) — Easy to use axum test client
+- [`hanzoai/azure-sdk-for-js`](https://forge.hanzo.ai/hanzoai/azure-sdk-for-js) — This repository is for active development of the Azure SDK for JavaScript (NodeJS & Browser). For consumers of the SDK we recommend visiting our public developer docs at https://do
+- [`hanzoai/babel`](https://forge.hanzo.ai/hanzoai/babel) — 🐠 Babel is a compiler for writing next generation JavaScript.
+- [`hanzoai/base`](https://forge.hanzo.ai/hanzoai/base)
+- [`hanzoai/base-ha`](https://forge.hanzo.ai/hanzoai/base-ha) — Hanzo Base HA plugin
+- [`hanzoai/bcrypt.js`](https://forge.hanzo.ai/hanzoai/bcrypt.js) — Optimized bcrypt in JavaScript with zero dependencies, with TypeScript support.
+- [`hanzoai/beego`](https://forge.hanzo.ai/hanzoai/beego) — Hanzo fork of beego v2 — prometheus/client_golang stripped, luxfi/metric backend (0 prom/grpc)
+- [`hanzoai/benchmarks`](https://forge.hanzo.ai/hanzoai/benchmarks) — Benchmark and load-testing framework for the Hanzo cloud platform and its subsystems.
+- [`hanzoai/better-sqlite3`](https://forge.hanzo.ai/hanzoai/better-sqlite3) — The fastest and simplest library for SQLite3 in Node.js.
+- [`hanzoai/better-sqlite3-multiple-ciphers`](https://forge.hanzo.ai/hanzoai/better-sqlite3-multiple-ciphers) — better-sqlite3 with multiple-cipher encryption support 🔒
+- [`hanzoai/billing`](https://forge.hanzo.ai/hanzoai/billing) — Billing dashboard for managing plans, payment methods, and crypto top-ups.
+- [`hanzoai/bitping-example-client`](https://forge.hanzo.ai/hanzoai/bitping-example-client) — Go service that watches Ethereum blocks and contract events and stores them in a database.
+- [`hanzoai/bot`](https://forge.hanzo.ai/hanzoai/bot) — Hanzo Bot — personal AI assistant across your messaging channels (WhatsApp, Telegram, Slack, Discord, Signal, iMessage, and more)
+- [`hanzoai/bot-formal-models`](https://forge.hanzo.ai/hanzoai/bot-formal-models) — TLA+ formal security models and regression tests for the Clawdbot agent platform.
+- [`hanzoai/bot-hub`](https://forge.hanzo.ai/hanzoai/bot-hub) — Public skill and persona registry for Clawdbot agents, with publishing, versioning, and vector search.
+- [`hanzoai/bot-railway-template`](https://forge.hanzo.ai/hanzoai/bot-railway-template) — Railway deployment template for OpenClaw with a setup wizard and persistent storage.
+- [`hanzoai/brain`](https://forge.hanzo.ai/hanzoai/brain) — The Hanzo Brain. Single binary brain that compounds knowledge across every channel, every agent, every runtime. SQLite + FTS5 + zero-LLM typed edges. One ~/.hanzo/brain/brain.db sh
+- [`hanzoai/brand`](https://forge.hanzo.ai/hanzoai/brand) — Official brand assets and design system for Hanzo AI
+- [`hanzoai/branding`](https://forge.hanzo.ai/hanzoai/branding) — Theming toolkit that generates a full design-system palette and Tailwind tokens from seed colors.
+- [`hanzoai/bridge-shim`](https://forge.hanzo.ai/hanzoai/bridge-shim) — Deprecated: Hanzo bridge now runs the upstream Lux bridge image directly, configured at runtime.
+- [`hanzoai/browser`](https://forge.hanzo.ai/hanzoai/browser) — Chrome extension for multi-agent AI web automation using your own LLM API keys.
+- [`hanzoai/browser-extension`](https://forge.hanzo.ai/hanzoai/browser-extension) — DEPRECATED — moved to hanzoai/extension (packages/browser/)
+- [`hanzoai/bucket`](https://forge.hanzo.ai/hanzoai/bucket) — Go client for cloud's versioned KV bucket store (/v1/kv)
+- [`hanzoai/bufferutil`](https://forge.hanzo.ai/hanzoai/bufferutil) — WebSocket buffer utils
+- [`hanzoai/build`](https://forge.hanzo.ai/hanzoai/build) — Mirror of github.com/hanzoai/build
+- [`hanzoai/build-demo`](https://forge.hanzo.ai/hanzoai/build-demo) — Proof that hanzo.app builds any project: a Go binary and an npm package from one hanzo.yml, no Dockerfile.
+- [`hanzoai/builder`](https://forge.hanzo.ai/hanzoai/builder)
+- [`hanzoai/ca`](https://forge.hanzo.ai/hanzoai/ca) — Trusty CA
+- [`hanzoai/cal`](https://forge.hanzo.ai/hanzoai/cal) — cal.hanzo.ai — Cal Booker (debranded @hanzo/calendar) on native Hanzo Base /v1/calendar
+- [`hanzoai/calendar`](https://forge.hanzo.ai/hanzoai/calendar) — Scheduling infrastructure for absolutely everyone.
+- [`hanzoai/captable`](https://forge.hanzo.ai/hanzoai/captable)
+- [`hanzoai/casibase`](https://forge.hanzo.ai/hanzoai/casibase) — preserved from git.hanzo.ai
+- [`hanzoai/catalog`](https://forge.hanzo.ai/hanzoai/catalog) — Edge-cached public catalog serving Hanzo's model, pricing, and plan data without authentication.
+- [`hanzoai/cc`](https://forge.hanzo.ai/hanzoai/cc) — Customize Claude Code's system prompts, create custom toolsets, input pattern highlighters, themes/thinking verbs/spinners, customize input box & user message styling, support AGEN
+- [`hanzoai/cd`](https://forge.hanzo.ai/hanzoai/cd)
+- [`hanzoai/cdn`](https://forge.hanzo.ai/hanzoai/cdn) — Static brand assets and app catalog data served via Hanzo's CDN.
+- [`hanzoai/cdn-worker`](https://forge.hanzo.ai/hanzoai/cdn-worker) — Cloudflare Worker that serves CDN assets from R2 storage for Hanzo's brand domains.
+- [`hanzoai/cd-ui`](https://forge.hanzo.ai/hanzoai/cd-ui) — Argo UI fork (patched with Hanzo theme) vendored for hanzoai/cd
+- [`hanzoai/cek`](https://forge.hanzo.ai/hanzoai/cek)
+- [`hanzoai/chains`](https://forge.hanzo.ai/hanzoai/chains) — VM plugin binaries for the Hanzo AI Network, including Lux VMs and a Hanzo EVM with AI precompiles.
+- [`hanzoai/charting_library`](https://forge.hanzo.ai/hanzoai/charting_library)
+- [`hanzoai/chartjs-plugin-stacked100`](https://forge.hanzo.ai/hanzoai/chartjs-plugin-stacked100) — This plugin for Chart.js that makes your bar chart to 100% stacked bar chart.
+- [`hanzoai/charts`](https://forge.hanzo.ai/hanzoai/charts) — Helm charts for Hanzo services: IAM, MPC nodes, bootnode API, and the zero-trust network fabric.
+- [`hanzoai/chat`](https://forge.hanzo.ai/hanzoai/chat) — Hanzo Chat — free, single-player AI chat with every model. Open source.
+- [`hanzoai/chat-rag-api`](https://forge.hanzo.ai/hanzoai/chat-rag-api) — Retired FastAPI RAG service for document embeddings; functionality moved into hanzoai/ai.
+- [`hanzoai/chat-template`](https://forge.hanzo.ai/hanzoai/chat-template) — Deployable template for running a custom-branded instance of Hanzo Chat with custom tools.
+- [`hanzoai/ci`](https://forge.hanzo.ai/hanzoai/ci) — Reusable CI/CD workflows for the estate
+- [`hanzoai/ci-signing`](https://forge.hanzo.ai/hanzoai/ci-signing) — Reusable GitHub Actions workflows to sign and notarize release artifacts across major platforms.
+- [`hanzoai/cli`](https://forge.hanzo.ai/hanzoai/cli) — The Hanzo CLI — an AI coding agent and every product of the Hanzo cloud, in one Rust binary. curl -fsSL https://hanzo.sh | sh
+- [`hanzoai/clickhouse-go-mock`](https://forge.hanzo.ai/hanzoai/clickhouse-go-mock) — SUPERSEDED by hanzo-ds/mock — the datastore family lives in the hanzo-ds org (go, mock, native, driver, connect, pool, sqlbuilder, sqlparser, js, rs, cpp). Kept only as a pre-debra
+- [`hanzoai/cli-v1`](https://forge.hanzo.ai/hanzoai/cli-v1) — 💻 Hanzo CLI. Control Hanzo from the comfort of your keyboard!
+- [`hanzoai/cloud`](https://forge.hanzo.ai/hanzoai/cloud) — Hanzo Cloud — OSS core. One Go binary. Dual-licensed Apache-2.0 OR MIT.
+- [`hanzoai/cloud-backend`](https://forge.hanzo.ai/hanzoai/cloud-backend) — Rust backend for Hanzo cloud services: authentication, billing, and routing across inference providers.
+- [`hanzoai/code`](https://forge.hanzo.ai/hanzoai/code) — Open source AI code editor — any model, full data control
+- [`hanzoai/codes`](https://forge.hanzo.ai/hanzoai/codes) — hanzo.codes — the coding surface of the Hanzo cloud. Static, monochrome, and readable by machines.
+- [`hanzoai/codex`](https://forge.hanzo.ai/hanzoai/codex) — Lightweight coding agent that runs in your terminal
+- [`hanzoai/collab`](https://forge.hanzo.ai/hanzoai/collab) — Realtime collaboration relay for Y.js documents over WebSocket, backed by SQLite or S3.
+- [`hanzoai/commerce`](https://forge.hanzo.ai/hanzoai/commerce) — Multi-tenant commerce and billing — orders, subscriptions, invoices, plans, usage metering and a credit ledger. One Go binary. MIT OR Apache-2.0.
+- [`hanzoai/common`](https://forge.hanzo.ai/hanzoai/common) — Hanzo fork of prometheus/common — go-conntrack stripped, 0 prom/grpc
+- [`hanzoai/community`](https://forge.hanzo.ai/hanzoai/community) — Community hub for Hanzo: Discord, forums, and events.
+- [`hanzoai/compute`](https://forge.hanzo.ai/hanzoai/compute) — Hanzo Compute — machines, clusters, pools and accelerators.
+- [`hanzoai/computer`](https://forge.hanzo.ai/hanzoai/computer)
+- [`hanzoai/container`](https://forge.hanzo.ai/hanzoai/container) — Container runtime manager for macOS and Linux, supporting Docker, Containerd, and Incus.
+- [`hanzoai/contracts`](https://forge.hanzo.ai/hanzoai/contracts) — Solidity smart contracts for Hanzo AI token, faucet, and on-chain identity registry.
+- [`hanzoai/control`](https://forge.hanzo.ai/hanzoai/control) — Hanzo Control — the controls surface for Hanzo apps and websites: appearance, language, help, and suggesting or editing the page you are viewing.
+- [`hanzoai/cookie`](https://forge.hanzo.ai/hanzoai/cookie) — HTTP server cookie parsing and serialization
+- [`hanzoai/cookie-parser`](https://forge.hanzo.ai/hanzoai/cookie-parser) — Parse HTTP request cookies
+- [`hanzoai/coredns-manager-operator`](https://forge.hanzo.ai/hanzoai/coredns-manager-operator) — With the CoreDNS Manager Operator, you can handle internal DNS directly within your Kubernetes cluster, simplifying the process and reducing infrastructure needs.
+- [`hanzoai/core-js`](https://forge.hanzo.ai/hanzoai/core-js) — Standard Library
+- [`hanzoai/core-networkmanagement`](https://forge.hanzo.ai/hanzoai/core-networkmanagement) — Networkmanager built with coreDNS and coreDHCP with web gui
+- [`hanzoai/cpy3`](https://forge.hanzo.ai/hanzoai/cpy3) — Go bindings to the CPython-3 API
+- [`hanzoai/crawl`](https://forge.hanzo.ai/hanzoai/crawl) — Read any web page as clean markdown. Go library, CLI and API.
+- [`hanzoai/cron`](https://forge.hanzo.ai/hanzoai/cron) — Distributed scheduler for cron-based and one-time jobs, with retries and dependencies.
+- [`hanzoai/cross-env`](https://forge.hanzo.ai/hanzoai/cross-env) — 🔀 Cross platform setting of environment scripts
+- [`hanzoai/crypto`](https://forge.hanzo.ai/hanzoai/crypto) — hanzo-crypto — post-quantum cryptography (ML-KEM, ML-DSA, HQC)
+- [`hanzoai/c-sdk`](https://forge.hanzo.ai/hanzoai/c-sdk) — The Hanzo API client for C.
+- [`hanzoai/csharp-sdk`](https://forge.hanzo.ai/hanzoai/csharp-sdk) — The Hanzo API client for C#.
+- [`hanzoai/csqlite`](https://forge.hanzo.ai/hanzoai/csqlite) — Self-contained cgo SQLite bindings for Go's database/sql, vendored in-tree
+- [`hanzoai/csv-mailchimp-importer`](https://forge.hanzo.ai/hanzoai/csv-mailchimp-importer) — Imports orders and customer records from CSV exports into Mailchimp via its API.
+- [`hanzoai/CUA`](https://forge.hanzo.ai/hanzoai/CUA) — Framework for multimodal AI models to operate a computer via mouse and keyboard.
+- [`hanzoai/cuckoo`](https://forge.hanzo.ai/hanzoai/cuckoo) — 🐦 Event recording library.
+- [`hanzoai/cyber`](https://forge.hanzo.ai/hanzoai/cyber) — OpenCyber Harness: container-native red and blue team security MCP toolkit. Public 1.0.0-beta.1 beta, Linux amd64 only.
+- [`hanzoai/daisho-riot`](https://forge.hanzo.ai/hanzoai/daisho-riot) — Riot.js UI components for Daisho.
+- [`hanzoai/daisho-sdk`](https://forge.hanzo.ai/hanzoai/daisho-sdk) — SDK client library for the Daisho ecommerce platform.
+- [`hanzoai/dart-sdk`](https://forge.hanzo.ai/hanzoai/dart-sdk) — Hanzo Dart/Flutter SDKs — landing. Real code → hanzo-dart/hanzoai (platform API) and hanzo-dart/base.
+- [`hanzoai/dashboards`](https://forge.hanzo.ai/hanzoai/dashboards) — [ARCHIVED] Superseded by hanzoai/o11y pkg/modules/dashboard — was folded into hanzoai/observability, which is itself superseded.
+- [`hanzoai/dashscopego`](https://forge.hanzo.ai/hanzoai/dashscopego) — Tongyi Qwen Aliyun Dashscope API Golang implementation, non-official
+- [`hanzoai/dashscope-go-sdk`](https://forge.hanzo.ai/hanzoai/dashscope-go-sdk) — Dashscope Go SDK
+- [`hanzoai/database`](https://forge.hanzo.ai/hanzoai/database) — Hanzo Database is a real-time analytics database management system.
+- [`hanzoai/dataroom`](https://forge.hanzo.ai/hanzoai/dataroom) — Open-source document-sharing platform with shareable links, analytics, and custom domains.
+- [`hanzoai/datastore`](https://forge.hanzo.ai/hanzoai/datastore)
+- [`hanzoai/datastore-go-mock`](https://forge.hanzo.ai/hanzoai/datastore-go-mock) — SUPERSEDED by hanzo-ds/mock — the datastore family lives in the hanzo-ds org (go, mock, native, driver, connect, pool, sqlbuilder, sqlparser, js, rs, cpp). Kept only as a pre-debra
+- [`hanzoai/datastore-orm`](https://forge.hanzo.ai/hanzoai/datastore-orm) — Python ORM for defining models and querying data in ClickHouse.
+- [`hanzoai/dbx`](https://forge.hanzo.ai/hanzoai/dbx) — A Go (golang) package that enhances the standard database/sql package by providing powerful data retrieval methods as well as DB-agnostic query building capabilities.
+- [`hanzoai/decimal`](https://forge.hanzo.ai/hanzoai/decimal) — Exact big.Int fixed-point decimal for Go — no precision ceiling, no float
+- [`hanzoai/deeplive`](https://forge.hanzo.ai/hanzoai/deeplive) — Real-time face swap and video deepfake tool using a single reference image.
+- [`hanzoai/deepspec`](https://forge.hanzo.ai/hanzoai/deepspec) — DeepSpec (DSpark/DFlash/Eagle3 draft training) + Hanzo V4 pipeline — fork of deepseek-ai/DeepSpec
+- [`hanzoai/deploy`](https://forge.hanzo.ai/hanzoai/deploy) — Declarative GitOps continuous delivery controller for Kubernetes.
+- [`hanzoai/design`](https://forge.hanzo.ai/hanzoai/design) — Hanzo Design System — monochrome, dark-default tokens + components + brand assets
+- [`hanzoai/desktop`](https://forge.hanzo.ai/hanzoai/desktop) — Hanzo Desktop — the client, local and cloud
+- [`hanzoai/detect`](https://forge.hanzo.ai/hanzoai/detect) — Derives a repository's CI/CD build and deploy configuration from its contents.
+- [`hanzoai/Detox`](https://forge.hanzo.ai/hanzoai/Detox) — Gray box end-to-end testing and automation framework for mobile apps
+- [`hanzoai/dev`](https://forge.hanzo.ai/hanzoai/dev) — Hanzo Dev Desktop — unified multi-agent control plane across Desktop, Web, and Mobile
+- [`hanzoai/dns`](https://forge.hanzo.ai/hanzoai/dns) — Hanzo DNS — CoreDNS fork with Hanzo plugins for programmable DNS infrastructure
+- [`hanzoai/dns-old`](https://forge.hanzo.ai/hanzoai/dns-old) — Programmable DNS infrastructure for service discovery
+- [`hanzoai/docdb`](https://forge.hanzo.ai/hanzoai/docdb) — MongoDB-compatible document database
+- [`hanzoai/docker-github-actions-runner`](https://forge.hanzo.ai/hanzoai/docker-github-actions-runner) — This will run the new self-hosted github actions runners with docker-in-docker
+- [`hanzoai/docs`](https://forge.hanzo.ai/hanzoai/docs)
+- [`hanzoai/docs-template`](https://forge.hanzo.ai/hanzoai/docs-template) — Documentation site template built with Next.js and MDX-based Hanzo Docs.
+- [`hanzoai/doctype`](https://forge.hanzo.ai/hanzoai/doctype) — DocType — metadata-driven schema primitive in pure Go (Frappe DocType core, no Python runtime)
+- [`hanzoai/DOMPurify`](https://forge.hanzo.ai/hanzoai/DOMPurify) — DOMPurify - a DOM-only, super-fast, uber-tolerant XSS sanitizer for HTML, MathML and SVG. DOMPurify works with a secure default, but offers a lot of configurability and hooks. Demo
+- [`hanzoai/download`](https://forge.hanzo.ai/hanzoai/download) — Canonical catalog of Hanzo download links and third-party install integrations.
+- [`hanzoai/drive`](https://forge.hanzo.ai/hanzoai/drive) — Post-quantum encrypted cloud storage where sharing re-wraps keys instead of re-encrypting content.
+- [`hanzoai/ecommerce-boilerplate`](https://forge.hanzo.ai/hanzoai/ecommerce-boilerplate) — Front-end boilerplate for ecommerce websites, built with Pug templates and CoffeeScript.
+- [`hanzoai/edge`](https://forge.hanzo.ai/hanzoai/edge) — Hanzo Edge — On-device AI inference for mobile, web, and embedded (built on Hanzo ML)
+- [`hanzoai/egress`](https://forge.hanzo.ai/hanzoai/egress) — The outbound trust boundary: callers ask for a metered upstream call, the provider credential stays in KMS and is never handed back.
+- [`hanzoai/elastic`](https://forge.hanzo.ai/hanzoai/elastic) — Full-text search engine deployment for the Hanzo Team collaboration platform.
+- [`hanzoai/elixir-sdk`](https://forge.hanzo.ai/hanzoai/elixir-sdk) — The Hanzo API client for Elixir.
+- [`hanzoai/elliptic`](https://forge.hanzo.ai/hanzoai/elliptic) — Fast Elliptic Curve Cryptography in plain javascript
+- [`hanzoai/email-verifier`](https://forge.hanzo.ai/hanzoai/email-verifier) — :white_check_mark: A Go library for email verification without sending any emails.
+- [`hanzoai/embeddings`](https://forge.hanzo.ai/hanzoai/embeddings) — API server for generating text embeddings via OpenAI, Voyage AI, or local models.
+- [`hanzoai/engine`](https://forge.hanzo.ai/hanzoai/engine) — Hanzo AI native inference engine - Rust-based LLM & embedding engine for foundational models
+- [`hanzoai/enso`](https://forge.hanzo.ai/hanzoai/enso) — Enso — Hanzo's agentic language model. A learned router sends every request to the model that serves it best.
+- [`hanzoai/erp`](https://forge.hanzo.ai/hanzoai/erp) — Free and Open Source Enterprise Resource Planning (ERP)
+- [`hanzoai/es5-ext`](https://forge.hanzo.ai/hanzoai/es5-ext) — ECMAScript extensions (with respect to upcoming ECMAScript features)
+- [`hanzoai/esbuild`](https://forge.hanzo.ai/hanzoai/esbuild) — An extremely fast bundler for the web
+- [`hanzoai/esign`](https://forge.hanzo.ai/hanzoai/esign) — Self-hosted document e-signature platform, an open source alternative to DocuSign.
+- [`hanzoai/eslint`](https://forge.hanzo.ai/hanzoai/eslint) — Find and fix problems in your JavaScript code.
+- [`hanzoai/etherplate`](https://forge.hanzo.ai/hanzoai/etherplate) — Example decentralized app demonstrating an ERC721 NFT contract with a React and Redux front end.
+- [`hanzoai/eval`](https://forge.hanzo.ai/hanzoai/eval) — Expression evaluator (Go) forked from casbin/govaluate v1.3.0; package renamed to eval.
+- [`hanzoai/examples`](https://forge.hanzo.ai/hanzoai/examples) — Example applications and deployment configurations for Dokploy.
+- [`hanzoai/expr`](https://forge.hanzo.ai/hanzoai/expr) — Expression language and expression evaluation for Go
+- [`hanzoai/express`](https://forge.hanzo.ai/hanzoai/express) — Fast, unopinionated, minimalist web framework for node.
+- [`hanzoai/extension`](https://forge.hanzo.ai/hanzoai/extension) — 🧩 Hanzo Extension: IDE plugin for VS Code compatible IDEs.
+- [`hanzoai/extract`](https://forge.hanzo.ai/hanzoai/extract) — Content extraction with built-in PII sanitization for web pages, PDFs, and conversation logs.
+- [`hanzoai/extract-svc`](https://forge.hanzo.ai/hanzoai/extract-svc) — Document text extraction service for PDF, DOCX, XLSX, PPTX, HTML, and RTF files.
+- [`hanzoai/facebook-gooddata-export`](https://forge.hanzo.ai/hanzoai/facebook-gooddata-export) — Exports Facebook advertising data to CSV files for GoodData reporting.
+- [`hanzoai/fb-auth-harness-next`](https://forge.hanzo.ai/hanzoai/fb-auth-harness-next) — Next.js example implementing server-side authentication with cookies via Firebase Admin SDK.
+- [`hanzoai/finance`](https://forge.hanzo.ai/hanzoai/finance) — Hanzo native financial core — one double-entry ledger on Base, unified binary, Formance ported native, Rust via FFI
+- [`hanzoai/firebase-js-sdk`](https://forge.hanzo.ai/hanzoai/firebase-js-sdk) — Firebase Javascript SDK
+- [`hanzoai/flags`](https://forge.hanzo.ai/hanzoai/flags) — Feature flags + A/B for the Hanzo platform — one native engine (cloud /v1/flags), SDKs for Go, Python, TypeScript, Rust, C FFI
+- [`hanzoai/flow`](https://forge.hanzo.ai/hanzoai/flow)
+- [`hanzoai/fn`](https://forge.hanzo.ai/hanzoai/fn)
+- [`hanzoai/font`](https://forge.hanzo.ai/hanzoai/font) — Zen — the Hanzo, Lux and Zoo typeface. Sans, Mono and Pixel, plus the Rust tools that fit a wordmark to drawn artwork.
+- [`hanzoai/forge`](https://forge.hanzo.ai/hanzoai/forge) — Hanzo Git. Painless self-hosted all-in-one software development service, including Git hosting, code review, team collaboration, package registry and CI/CD
+- [`hanzoai/form`](https://forge.hanzo.ai/hanzoai/form) — Forms, responses, themes and webhooks (Go module + @hanzo/form)
+- [`hanzoai/form.js`](https://forge.hanzo.ai/hanzoai/form.js) — 🖍️ Automagic forms.
+- [`hanzoai/forum`](https://forge.hanzo.ai/hanzoai/forum) — Tracking fork of Discourse, kept for a future Hanzo community forum. Nothing Hanzo-specific built on it yet.
+- [`hanzoai/frame`](https://forge.hanzo.ai/hanzoai/frame) — The film at the top of the page — one full-bleed hero video primitive for every Hanzo surface.
+- [`hanzoai/frames`](https://forge.hanzo.ai/hanzoai/frames) — Write HTML. Render video. Built for agents.
+- [`hanzoai/framework`](https://forge.hanzo.ai/hanzoai/framework) — Hanzo Framework — the Go DocType engine: store, hooks, modules, permissions. Foundation for CMS/ERP/CRM/Helpdesk.
+- [`hanzoai/frappe`](https://forge.hanzo.ai/hanzoai/frappe) — Full-stack low-code web application framework in Python and JavaScript.
+- [`hanzoai/frenchdab`](https://forge.hanzo.ai/hanzoai/frenchdab) — Next.js example demonstrating global state management with MobX and React hooks.
+- [`hanzoai/fsevents`](https://forge.hanzo.ai/hanzoai/fsevents) — Native access to MacOS FSEvents in Node.js
+- [`hanzoai/functions`](https://forge.hanzo.ai/hanzoai/functions) — Hanzo Functions — FaaS control plane. The live API is /v1/functions in hanzoai/cloud; the standalone cluster install was retired 2026-08-04.
+- [`hanzoai/gallery`](https://forge.hanzo.ai/hanzoai/gallery) — Restored from the DigitalOcean evacuation
+- [`hanzoai/gateway`](https://forge.hanzo.ai/hanzoai/gateway) — Hanzo Gateway — the stateless trust boundary at api.hanzo.ai: IAM identity, rate limiting, metering and CORS, then a straight forward to cloud. Routing lives in cloud, not here.
+- [`hanzoai/gen`](https://forge.hanzo.ai/hanzoai/gen) — Hanzo Gen — the agentic harness: launch and route any coding agent (Hanzo Dev, Claude Code, Codex, Cursor, …) with Hanzo MCP and one model router
+- [`hanzoai/gimp-mcp`](https://forge.hanzo.ai/hanzoai/gimp-mcp) — GIMP MCP server
+- [`hanzoai/.github`](https://forge.hanzo.ai/hanzoai/.github)
+- [`hanzoai/git-runner`](https://forge.hanzo.ai/hanzoai/git-runner) — CI runner that executes .hanzo/workflows jobs for git.hanzo.ai.
+- [`hanzoai/go`](https://forge.hanzo.ai/hanzoai/go)
+- [`hanzoai/goa`](https://forge.hanzo.ai/hanzoai/goa) — Pure-Go polyglot embedding: run Go, JS/TS (goja), Python (gpython), Rust/WASM (wazero) as goroutines in one static binary. Unifies Hanzo cloud services.
+- [`hanzoai/gocache`](https://forge.hanzo.ai/hanzoai/gocache) — Shared build cache for the Go compiler, backed by local disk and object storage tiers.
+- [`hanzoai/gochimp3`](https://forge.hanzo.ai/hanzoai/gochimp3) — 🐒 Golang client for MailChimp API 3.0.
+- [`hanzoai/go-cosyvoice`](https://forge.hanzo.ai/hanzoai/go-cosyvoice)
+- [`hanzoai/godot-sdk`](https://forge.hanzo.ai/hanzoai/godot-sdk) — Official Godot 4 SDK for the Hanzo Cloud API (api.hanzo.ai) — Zen 6 LLMs, Kai decisions, Zen Voice TTS, Agents, KV, Billing, and MCP Tools
+- [`hanzoai/goexif`](https://forge.hanzo.ai/hanzoai/goexif) — EXIF decoder for Go — Hanzo fork of goexif (BSD-2-Clause). Module: github.com/hanzoai/goexif
+- [`hanzoai/go-fulfillment`](https://forge.hanzo.ai/hanzoai/go-fulfillment) — Go client library for the Fulfillment.com API.
+- [`hanzoai/go-fuse`](https://forge.hanzo.ai/hanzoai/go-fuse)
+- [`hanzoai/gomail`](https://forge.hanzo.ai/hanzoai/gomail) — Go library for sending emails over SMTP, with attachments and HTML templates.
+- [`hanzoai/go-openai`](https://forge.hanzo.ai/hanzoai/go-openai)
+- [`hanzoai/go-openai-realtime`](https://forge.hanzo.ai/hanzoai/go-openai-realtime)
+- [`hanzoai/go-openrouter`](https://forge.hanzo.ai/hanzoai/go-openrouter)
+- [`hanzoai/go-sms-sender`](https://forge.hanzo.ai/hanzoai/go-sms-sender) — Go library for sending SMS through multiple providers, used by Hanzo IAM.
+- [`hanzoai/govaluate`](https://forge.hanzo.ai/hanzoai/govaluate) — MIT expression evaluation for Go (fork of Knetic/govaluate)
+- [`hanzoai/gpt`](https://forge.hanzo.ai/hanzoai/gpt) — Implementation for training and running GPT-style language models with extended context.
+- [`hanzoai/graph`](https://forge.hanzo.ai/hanzoai/graph) — Graph engine for Hanzo Cloud — posting lists and DQL over zapdb, ZAP-native. Derived from Dgraph (Apache-2.0).
+- [`hanzoai/grid`](https://forge.hanzo.ai/hanzoai/grid) — grid — what a machine runs to be part of the cluster. Upstream k3s, Hanzo paths, no fork.
+- [`hanzoai/grpc-web`](https://forge.hanzo.ai/hanzoai/grpc-web) — gRPC Web implementation for Golang and TypeScript
+- [`hanzoai/guard`](https://forge.hanzo.ai/hanzoai/guard) — The safety layer for LLM applications: stop unsafe inputs going in and sensitive data coming out.
+- [`hanzoai/gui`](https://forge.hanzo.ai/hanzoai/gui)
+- [`hanzoai/gym`](https://forge.hanzo.ai/hanzoai/gym) — Hanzo Gym — LoRA fine-tuning and GRPO for language models, in Rust on hanzo-ml
+- [`hanzoai/gym-v1`](https://forge.hanzo.ai/hanzoai/gym-v1) — Hanzo Gym is an open-source Python toolkit that facilitates distributed AI research.
+- [`hanzoai/ha`](https://forge.hanzo.ai/hanzoai/ha) — Single-writer election over a live membership set (HRW/Rendezvous) — Hanzo's HA coordination primitive. No coordinator, lock service, Postgres, or Redis.
+- [`hanzoai/handlebars.js`](https://forge.hanzo.ai/hanzoai/handlebars.js) — Minimal templating on steroids.
+- [`hanzoai/hanzo-action`](https://forge.hanzo.ai/hanzoai/hanzo-action) — GitHub Action to deploy container images to Hanzo PaaS.
+- [`hanzoai/hanzo.ai`](https://forge.hanzo.ai/hanzoai/hanzo.ai)
+- [`hanzoai/hanzoai_agent`](https://forge.hanzo.ai/hanzoai/hanzoai_agent)
+- [`hanzoai/hanzo-analytics`](https://forge.hanzo.ai/hanzoai/hanzo-analytics) — Crowdstart's Tracking/Analytics Library
+- [`hanzoai/hanzo-crypto`](https://forge.hanzo.ai/hanzoai/hanzo-crypto) — Post-quantum cryptography library with ML-KEM, ML-DSA, and HQC, optimized for ARM.
+- [`hanzoai/Hanzo-DiffuEraser`](https://forge.hanzo.ai/hanzoai/Hanzo-DiffuEraser) — ComfyUI custom node for content-aware video inpainting, part of the Hanzo Painter stack.
+- [`hanzoai/Hanzo-EasyUse`](https://forge.hanzo.ai/hanzoai/Hanzo-EasyUse) — In order to make it easier to use the ComfyUI, I have made some optimizations and integrations to some commonly used nodes.
+- [`hanzoai/hanzo.el`](https://forge.hanzo.ai/hanzoai/hanzo.el) — Emacs package for AI-assisted code completion, explanation, and refactoring across multiple AI providers.
+- [`hanzoai/hanzo-go`](https://forge.hanzo.ai/hanzoai/hanzo-go) — [RETIRED — use hanzoai/go-sdk] Held only CLAUDE.md/LLM.md; never had SDK code. The Go client is the public hanzoai/go-sdk.
+- [`hanzoai/hanzo.industries`](https://forge.hanzo.ai/hanzoai/hanzo.industries) — Marketing site for Hanzo AI's defense and enterprise offerings.
+- [`hanzoai/hanzo-kernel`](https://forge.hanzo.ai/hanzoai/hanzo-kernel) — Local-only checkout; no git remote existed
+- [`hanzoai/Hanzo-KJNodes`](https://forge.hanzo.ai/hanzoai/Hanzo-KJNodes) — Various custom nodes for ComfyUI
+- [`hanzoai/Hanzo-MLX`](https://forge.hanzo.ai/hanzoai/Hanzo-MLX) — ComfyUI nodes with Apple Silicon MLX acceleration for the Hanzo Painter image and video pipeline.
+- [`hanzoai/hanzo.network`](https://forge.hanzo.ai/hanzoai/hanzo.network) — Marketing website for Hanzo AI built with React, TypeScript, and Tailwind CSS.
+- [`hanzoai/hanzo.one`](https://forge.hanzo.ai/hanzoai/hanzo.one) — Marketing website for Hanzo AI, built with React, TypeScript, and Tailwind CSS.
+- [`hanzoai/hanzo-php`](https://forge.hanzo.ai/hanzoai/hanzo-php) — PHP client library for making requests to the Hanzo API.
+- [`hanzoai/hanzo-rails`](https://forge.hanzo.ai/hanzoai/hanzo-rails) — Ruby Gem for Crowdstart Analytics
+- [`hanzoai/hanzo.sh`](https://forge.hanzo.ai/hanzoai/hanzo.sh) — Install script host for Hanzo CLI and MCP tool binaries.
+- [`hanzoai/hanzo.sh-native`](https://forge.hanzo.ai/hanzoai/hanzo.sh-native) — Mirrored from git.hanzo.ai
+- [`hanzoai/hanzo-solidity-old`](https://forge.hanzo.ai/hanzoai/hanzo-solidity-old)
+- [`hanzoai/Hanzo-VideoHelper`](https://forge.hanzo.ai/hanzoai/Hanzo-VideoHelper) — Nodes related to video workflows
+- [`hanzoai/hanzo.vim`](https://forge.hanzo.ai/hanzoai/hanzo.vim) — Hanzo AI Vim/Neovim code generation and editor integration.
+- [`hanzoai/helpdesk`](https://forge.hanzo.ai/hanzoai/helpdesk)
+- [`hanzoai/helper`](https://forge.hanzo.ai/hanzoai/helper) — Hanzo helper CLI: configure Claude Code, Claude Desktop, and Codex to use Hanzo AI
+- [`hanzoai/help-site`](https://forge.hanzo.ai/hanzoai/help-site) — Help center with guides, docs, and support articles for Hanzo AI.
+- [`hanzoai/hips`](https://forge.hanzo.ai/hanzoai/hips) — Design proposals and specifications for the Hanzo AI platform (HIPs).
+- [`hanzoai/hke`](https://forge.hanzo.ai/hanzoai/hke)
+- [`hanzoai/home`](https://forge.hanzo.ai/hanzoai/home) — Forkable personal homepage template with GitHub stats and social integrations.
+- [`hanzoai/homebrew`](https://forge.hanzo.ai/hanzoai/homebrew) — Hanzo unified Homebrew tap — all hanzoai formulae (brew tap hanzoai/homebrew)
+- [`hanzoai/homebrew-tap`](https://forge.hanzo.ai/hanzoai/homebrew-tap) — Homebrew formulae for Hanzo AI tools
+- [`hanzoai/hsm`](https://forge.hanzo.ai/hanzoai/hsm) — Hanzo HSM — Cloud HSM signers (AWS, GCP, Azure, Zymbit, ML-DSA) with threshold MPC adapter
+- [`hanzoai/husky`](https://forge.hanzo.ai/hanzoai/husky) — Git hooks made easy 🐶 woof!
+- [`hanzoai/i18n`](https://forge.hanzo.ai/hanzoai/i18n) — Translation toolkit and pipeline for the Hanzo, Lux, Zoo, and Pars ecosystem.
+- [`hanzoai/iam`](https://forge.hanzo.ai/hanzoai/iam) — Hanzo IAM v2 — proprietary identity service on zap-proto/zip + hanzoai/orm + hanzoai/base. Clean-room, original work.
+- [`hanzoai/iam-js`](https://forge.hanzo.ai/hanzoai/iam-js) — Hanzo IAM JavaScript/TypeScript SDK — OIDC auth, billing, and browser PKCE flows
+- [`hanzoai/iam-js-sdk`](https://forge.hanzo.ai/hanzoai/iam-js-sdk) — Javascript client SDK for Hanzo IAM
+- [`hanzoai/iam-sdk`](https://forge.hanzo.ai/hanzoai/iam-sdk) — The one-way TypeScript SDK for Hanzo IAM (OIDC auth, JWT validation, OAuth2 PKCE)
+- [`hanzoai/iamsdk`](https://forge.hanzo.ai/hanzoai/iamsdk) — Hanzo IAM Go SDK — Go client for Hanzo IAM (forked + renamed from casdoor-go-sdk)
+- [`hanzoai/icons`](https://forge.hanzo.ai/hanzoai/icons) — 🥨 Lobe Icons - Brings AI/LLM brand logos to your React & React Native apps — static SVG/PNG/WebP, no dependencies.
+- [`hanzoai/id`](https://forge.hanzo.ai/hanzoai/id)
+- [`hanzoai/ide`](https://forge.hanzo.ai/hanzoai/ide) — AI-native IDE built in Rust — Hanzo
+- [`hanzoai/id-static`](https://forge.hanzo.ai/hanzoai/id-static) — Zero-dependency static login page implementing PKCE OAuth2 for Hanzo ID.
+- [`hanzoai/idv`](https://forge.hanzo.ai/hanzoai/idv) — Pluggable identity verification — Jumio, Onfido, Plaid, LexisNexis, Intellicheck, IDMerit, Berbix
+- [`hanzoai/id-worker`](https://forge.hanzo.ai/hanzoai/id-worker) — Cloudflare Worker for hanzo.id that routes authentication to IAM and serves the marketing site.
+- [`hanzoai/index`](https://forge.hanzo.ai/hanzoai/index) — Search index in Rust: documents in, ranked results out. Full-text, vector, and hybrid retrieval.
+- [`hanzoai/infi.clickhouse_orm`](https://forge.hanzo.ai/hanzoai/infi.clickhouse_orm) — SUPERSEDED by hanzo-ds — the datastore family lives in the hanzo-ds org (go, mock, native, driver, connect, pool, sqlbuilder, sqlparser, js, rs, cpp). Kept only as a pre-debrand sn
+- [`hanzoai/ingress`](https://forge.hanzo.ai/hanzoai/ingress)
+- [`hanzoai/ingress-parser`](https://forge.hanzo.ai/hanzoai/ingress-parser)
+- [`hanzoai/init`](https://forge.hanzo.ai/hanzoai/init) — Initialization scripts and templates for setting up a Huly-based workspace.
+- [`hanzoai/insights`](https://forge.hanzo.ai/hanzoai/insights) — Hanzo Insights — product analytics and feature flags.
+- [`hanzoai/insights-go`](https://forge.hanzo.ai/hanzoai/insights-go) — Hanzo Insights Go SDK - Go client for Hanzo Insights (PostHog)
+- [`hanzoai/insights-icons`](https://forge.hanzo.ai/hanzoai/insights-icons) — Product icon set for Hanzo Insights
+- [`hanzoai/insights-js`](https://forge.hanzo.ai/hanzoai/insights-js) — Hanzo Insights JS SDK — @hanzo/insights browser/node/react packages (posthog-js fork)
+- [`hanzoai/insights-node`](https://forge.hanzo.ai/hanzoai/insights-node) — Hanzo Insights Node.js SDK (deprecated — use @hanzo/insights-node from hanzoai/insights-js)
+- [`hanzoai/insights-python`](https://forge.hanzo.ai/hanzoai/insights-python) — [KILLED] Not part of the Hanzo estate. No universe reference, nothing deployed. The posthog- prefix is not used in anything.
+- [`hanzoai/insights-rs`](https://forge.hanzo.ai/hanzoai/insights-rs) — Official PostHog Rust SDK
+- [`hanzoai/iris`](https://forge.hanzo.ai/hanzoai/iris) — Iris: see and control a sandbox or machine over ZAP — embedded browser by default, desktop when needed
+- [`hanzoai/iro`](https://forge.hanzo.ai/hanzoai/iro) — Hanzo Creative AI — iro
+- [`hanzoai/java-sdk`](https://forge.hanzo.ai/hanzoai/java-sdk) — Hanzo Cloud SDK for Java — the full /v1 cloud surface as a typed client (ai.hanzo:sdk). Generated from the Hanzo OpenAPI spec.
+- [`hanzoai/jest`](https://forge.hanzo.ai/hanzoai/jest) — Delightful JavaScript Testing.
+- [`hanzoai/jin`](https://forge.hanzo.ai/hanzoai/jin) — Self-supervised learning research: I-JEPA and Saccade-JEPA image representation experiments.
+- [`hanzoai/jose`](https://forge.hanzo.ai/hanzoai/jose) — JWA, JWS, JWE, JWT, JWK, JWKS for Node.js, Browser, Cloudflare Workers, Deno, Bun, and other Web-interoperable runtimes
+- [`hanzoai/jsautogui`](https://forge.hanzo.ai/hanzoai/jsautogui) — Node.js addon for programmatic mouse and keyboard control, built with a native C++ backend.
+- [`hanzoai/jslib-boilerplate`](https://forge.hanzo.ai/hanzoai/jslib-boilerplate) — Boilerplate template for building standalone JavaScript libraries.
+- [`hanzoai/js-sdk`](https://forge.hanzo.ai/hanzoai/js-sdk) — Hanzo AI SDK for TypeScript/JavaScript — agents, cloud, inference.
+- [`hanzoai/jube-fork`](https://forge.hanzo.ai/hanzoai/jube-fork) — Open source AML and fraud detection platform with real-time transaction monitoring and case management.
+- [`hanzoai/jupyterlab-sos`](https://forge.hanzo.ai/hanzoai/jupyterlab-sos)
+- [`hanzoai/jwt`](https://forge.hanzo.ai/hanzoai/jwt) — Shared JWT sign/verify/JWKS for the Hanzo platform — one canonical Claims, RS256/ES/ML-DSA-65, imported by iam2 (mint) + cloud/gateway (validate)
+- [`hanzoai/k8s`](https://forge.hanzo.ai/hanzoai/k8s) — Hanzo Kubernetes service and the node disk guard
+- [`hanzoai/kafka`](https://forge.hanzo.ai/hanzoai/kafka) — Hanzo Kafka — the Kafka adaptor. Builds ghcr.io/hanzoai/kafka.
+- [`hanzoai/kai`](https://forge.hanzo.ai/hanzoai/kai) — Kai examples, recipes and docs. Pull mirror of github.com/hanzoai/kai, where it is written; CI runs here.
+- [`hanzoai/karma-style`](https://forge.hanzo.ai/hanzoai/karma-style) — Static storefront site for Karma Bikinis, with built-in analytics and commerce tracking.
+- [`hanzoai/kata`](https://forge.hanzo.ai/hanzoai/kata) — Hanzo Kata — autonomous agentic coding and CI/CD triage loop
+- [`hanzoai/kensho`](https://forge.hanzo.ai/hanzoai/kensho)
+- [`hanzoai/kernel`](https://forge.hanzo.ai/hanzoai/kernel) — Rust GPU kernel language that compiles one source to CUDA, ROCm, Vulkan, Metal, WebGPU, and CPU.
+- [`hanzoai/kms`](https://forge.hanzo.ai/hanzoai/kms)
+- [`hanzoai/kms-operator`](https://forge.hanzo.ai/hanzoai/kms-operator) — Kubernetes operator for KMS secret management
+- [`hanzoai/koe`](https://forge.hanzo.ai/hanzoai/koe)
+- [`hanzoai/koma`](https://forge.hanzo.ai/hanzoai/koma) — Hanzo Creative AI — koma
+- [`hanzoai/krakend-otel`](https://forge.hanzo.ai/hanzoai/krakend-otel)
+- [`hanzoai/kv`](https://forge.hanzo.ai/hanzoai/kv) — Ultra-fast key-value store with Redis API compatibility
+- [`hanzoai/kv-commands`](https://forge.hanzo.ai/hanzoai/kv-commands) — Command metadata for Hanzo KV: arity, flags, and key positions.
+- [`hanzoai/kv-errors`](https://forge.hanzo.ai/hanzoai/kv-errors) — Error values for the Hanzo KV wire protocol.
+- [`hanzoai/kv-parser`](https://forge.hanzo.ai/hanzoai/kv-parser) — Wire-protocol decoder for Hanzo KV.
+- [`hanzoai/lastpass-mcp`](https://forge.hanzo.ai/hanzoai/lastpass-mcp) — Native LastPass MCP server & Hanzo Egress / ZAP browser autofill bridge
+- [`hanzoai/LatentSync`](https://forge.hanzo.ai/hanzoai/LatentSync) — Restored from the DigitalOcean evacuation
+- [`hanzoai/laya`](https://forge.hanzo.ai/hanzoai/laya) — Non-autoregressive System 1 decision engine. Typed choice, score and yes/no decisions over any text in a single forward pass, in 100+ languages, with a router that picks the right 
+- [`hanzoai/ld-demo`](https://forge.hanzo.ai/hanzoai/ld-demo)
+- [`hanzoai/lint-staged`](https://forge.hanzo.ai/hanzoai/lint-staged) — 🚫💩 — Run tasks like formatters and linters against staged git files
+- [`hanzoai/live`](https://forge.hanzo.ai/hanzoai/live) — Runs and customizes real-time interactive generative video pipelines over WebRTC.
+- [`hanzoai/livekit`](https://forge.hanzo.ai/hanzoai/livekit) — End-to-end realtime stack for connecting humans and AI
+- [`hanzoai/llm-toolchain`](https://forge.hanzo.ai/hanzoai/llm-toolchain) — Service for managing LLM API keys, schemas, tools, and model config over ZAP RPC.
+- [`hanzoai/log`](https://forge.hanzo.ai/hanzoai/log) — High-performance zero-allocation structured logging for Go
+- [`hanzoai/logo`](https://forge.hanzo.ai/hanzoai/logo) — Official Hanzo logo package with TypeScript/React components and utilities
+- [`hanzoai/lsp`](https://forge.hanzo.ai/hanzoai/lsp) — Jailed language-server daemon: immutable per-(org,repo,commit) roots, gopls behind a seccomp jail with no network. Backs /v1/code/lsp.
+- [`hanzoai/ltx`](https://forge.hanzo.ai/hanzoai/ltx) — Hanzo fork of superfly/ltx — uses hanzoai/lz4 instead of pierrec/lz4
+- [`hanzoai/lux.id`](https://forge.hanzo.ai/hanzoai/lux.id) — Cloudflare Worker for lux.id: routes authentication to IAM and serves the marketing site.
+- [`hanzoai/mail`](https://forge.hanzo.ai/hanzoai/mail) — Hanzo Mail. Self-hosted mail server (SMTP, IMAP, webmail, DKIM/SPF/DMARC). Fork of mjl-/mox, MIT.
+- [`hanzoai/market`](https://forge.hanzo.ai/hanzoai/market) — Public registry for publishing, versioning, and searching Hanzo Bot agent skills and personas.
+- [`hanzoai/mcp`](https://forge.hanzo.ai/hanzoai/mcp) — Model Context Protocol server with 260+ tools for AI agents
+- [`hanzoai/mcp-remote-macos`](https://forge.hanzo.ai/hanzoai/mcp-remote-macos)
+- [`hanzoai/mcp-remote-macos-use`](https://forge.hanzo.ai/hanzoai/mcp-remote-macos-use) — MCP server for controlling a remote macOS system over screen sharing.
+- [`hanzoai/mcp-server-cloudflare`](https://forge.hanzo.ai/hanzoai/mcp-server-cloudflare) — Model Context Protocol servers for managing Cloudflare account resources.
+- [`hanzoai/mds`](https://forge.hanzo.ai/hanzoai/mds) — Design system and component specification for MinIO product UIs.
+- [`hanzoai/mdx`](https://forge.hanzo.ai/hanzoai/mdx) — MDX processing library with loaders for Next.js, Vite, Bun, and Node.
+- [`hanzoai/metrics`](https://forge.hanzo.ai/hanzoai/metrics) — [ARCHIVED] Superseded by hanzoai/o11y — one subsystem serves metrics, logs and traces at /v1/o11y/*
+- [`hanzoai/migrate`](https://forge.hanzo.ai/hanzoai/migrate) — Database migrations. CLI and Golang library.
+- [`hanzoai/migration`](https://forge.hanzo.ai/hanzoai/migration) — Migration and decommission runbook for consolidating Hanzo Cloud onto one SQLite-backed binary.
+- [`hanzoai/minutes`](https://forge.hanzo.ai/hanzoai/minutes) — Desktop app that records meetings, transcribes them locally, and writes the minutes.
+- [`hanzoai/ml`](https://forge.hanzo.ai/hanzoai/ml) — Hanzo ML — fast multi-backend (CPU/CUDA/Metal/ROCm/Vulkan) tensor & ML framework for Rust with quantization; the compute core of the Hanzo stack.
+- [`hanzoai/mobile`](https://forge.hanzo.ai/hanzoai/mobile) — Hanzo AI for iOS and Android — chat, voice, image generation, and agent tasks on @hanzo/gui, with picture-in-picture progress and home-screen widgets
+- [`hanzoai/mock`](https://forge.hanzo.ai/hanzoai/mock) — Hanzo datastore-native mock (fork of clickhouse-go-mock) — Datastore API for hanzoai/otel-collector tests
+- [`hanzoai/mod`](https://forge.hanzo.ai/hanzoai/mod) — The Go module proxy: answers for our module names, reads the source from the forge.
+- [`hanzoai/models`](https://forge.hanzo.ai/hanzoai/models) — Model registry API for models.hanzo.ai, listing available AI models.
+- [`hanzoai/moe`](https://forge.hanzo.ai/hanzoai/moe) — From-scratch Python implementation of a mixture-of-experts transformer language model.
+- [`hanzoai/money`](https://forge.hanzo.ai/hanzoai/money) — Exact money (Amount+Currency) for Go on big.Int decimal — fiat + 18-dec crypto, no ceiling
+- [`hanzoai/mongodb-memory-server`](https://forge.hanzo.ai/hanzoai/mongodb-memory-server) — Manage & spin up mongodb server binaries with zero(or slight) configuration for tests.
+- [`hanzoai/mori`](https://forge.hanzo.ai/hanzoai/mori) — Hanzo Creative AI — mori
+- [`hanzoai/movie-scrapper`](https://forge.hanzo.ai/hanzoai/movie-scrapper) — Node.js script that scrapes IMDB movie data and fetches trailer links from The Movie Database API.
+- [`hanzoai/mpc`](https://forge.hanzo.ai/hanzoai/mpc) — Retired — use luxfi/mpc.
+- [`hanzoai/msw`](https://forge.hanzo.ai/hanzoai/msw) — Industry standard API mocking for JavaScript.
+- [`hanzoai/mugen`](https://forge.hanzo.ai/hanzoai/mugen) — PyTorch library for audio generation research, including text-to-music and text-to-sound models.
+- [`hanzoai/musetalk-bench`](https://forge.hanzo.ai/hanzoai/musetalk-bench) — Local-only checkout; no git remote existed
+- [`hanzoai/musetalk-bench-backends`](https://forge.hanzo.ai/hanzoai/musetalk-bench-backends) — Local-only checkout; no git remote existed
+- [`hanzoai/namespace`](https://forge.hanzo.ai/hanzoai/namespace)
+- [`hanzoai/nasastore`](https://forge.hanzo.ai/hanzoai/nasastore) — Static assets for a NASA space poster store, including a zipped poster collection.
+- [`hanzoai/nchain`](https://forge.hanzo.ai/hanzoai/nchain) — Operator for composable blockchain node infrastructure.
+- [`hanzoai/networking`](https://forge.hanzo.ai/hanzoai/networking)
+- [`hanzoai/next.js`](https://forge.hanzo.ai/hanzoai/next.js) — The React Framework
+- [`hanzoai/nextjs-template`](https://forge.hanzo.ai/hanzoai/nextjs-template) — Next.js starter template for building apps with the @hanzo/ui and @hanzo/gui component libraries.
+- [`hanzoai/nginx`](https://forge.hanzo.ai/hanzoai/nginx) — Thin fork of upstream nginx with added Hanzo OCI image labels.
+- [`hanzoai/node`](https://forge.hanzo.ai/hanzoai/node) — The Hanzo network node — hanzod
+- [`hanzoai/node-dtrace-provider`](https://forge.hanzo.ai/hanzoai/node-dtrace-provider) — Native DTrace probes for node.js apps
+- [`hanzoai/nodejs`](https://forge.hanzo.ai/hanzoai/nodejs) — Canonical Node 24 + sqlite3 base image for all Hanzo Node services
+- [`hanzoai/node-jsonwebtoken`](https://forge.hanzo.ai/hanzoai/node-jsonwebtoken) — JsonWebToken implementation for node.js http://self-issued.info/docs/draft-ietf-oauth-json-web-token.html
+- [`hanzoai/node-jwks-rsa`](https://forge.hanzo.ai/hanzoai/node-jwks-rsa) — A library to retrieve RSA public keys from a JWKS (JSON Web Key Set) endpoint.
+- [`hanzoai/nodemailer-resend`](https://forge.hanzo.ai/hanzoai/nodemailer-resend) — Nodemailer transport for sending email through the Resend API.
+- [`hanzoai/node-sdk`](https://forge.hanzo.ai/hanzoai/node-sdk) — Node.js SDK for Hanzo KMS, the org-scoped secret store.
+- [`hanzoai/notebook`](https://forge.hanzo.ai/hanzoai/notebook) — Converts PDF documents into podcast-style audio using local language models and text-to-speech.
+- [`hanzoai/notify`](https://forge.hanzo.ai/hanzoai/notify) — A dead simple Go library for sending notifications to various messaging services.
+- [`hanzoai/npt`](https://forge.hanzo.ai/hanzoai/npt) — Non-parametric transformer implementation for anomaly detection on tabular data.
+- [`hanzoai/numscript`](https://forge.hanzo.ai/hanzoai/numscript) — Hanzo fork of formancehq/numscript — Numscript DSL interpreter (module github.com/hanzoai/numscript)
+- [`hanzoai/o11y`](https://forge.hanzo.ai/hanzoai/o11y) — Hanzo o11y — OpenTelemetry-native observability (metrics, traces, logs) for the Hanzo platform, backed by Hanzo Datastore.
+- [`hanzoai/o11y-agent-skills`](https://forge.hanzo.ai/hanzoai/o11y-agent-skills) — Claude Code and Cursor skills for querying and troubleshooting SigNoz observability data.
+- [`hanzoai/o11y-components`](https://forge.hanzo.ai/hanzoai/o11y-components) — React UI component library and design tokens for building observability dashboards.
+- [`hanzoai/o11y-design-tokens`](https://forge.hanzo.ai/hanzoai/o11y-design-tokens)
+- [`hanzoai/o11y-foundry`](https://forge.hanzo.ai/hanzoai/o11y-foundry) — Foundry is a centralized hub for SigNoz installation configurations and deployments: integrations for install. Select yours, configure, and run SigNoz.
+- [`hanzoai/o11y-icons`](https://forge.hanzo.ai/hanzoai/o11y-icons)
+- [`hanzoai/o11y-mcp`](https://forge.hanzo.ai/hanzoai/o11y-mcp)
+- [`hanzoai/oauthful`](https://forge.hanzo.ai/hanzoai/oauthful) — Go framework library for building OAuth2 servers and clients.
+- [`hanzoai/observability`](https://forge.hanzo.ai/hanzoai/observability) — [ARCHIVED] Superseded by hanzoai/o11y pkg/modules/{llmobs,dashboard,tracedetail,tracefunnel} — never deployed, 0 importers.
+- [`hanzoai/onnxgo`](https://forge.hanzo.ai/hanzoai/onnxgo) — Hanzo ONNX Runtime for Go
+- [`hanzoai/openapi`](https://forge.hanzo.ai/hanzoai/openapi) — Mirror of github.com/hanzoai/openapi
+- [`hanzoai/opencode-openai-codex-auth`](https://forge.hanzo.ai/hanzoai/opencode-openai-codex-auth) — Fork of numman-ali/opencode-openai-codex-auth
+- [`hanzoai/openid-client`](https://forge.hanzo.ai/hanzoai/openid-client) — OAuth 2 / OpenID Connect Client API for JavaScript Runtimes
+- [`hanzoai/open-instruct`](https://forge.hanzo.ai/hanzoai/open-instruct) — Code and pipelines for instruction-tuning and post-training open language models.
+- [`hanzoai/operator`](https://forge.hanzo.ai/hanzoai/operator) — Kubernetes operator that reconciles Hanzo platform custom resources into running infrastructure.
+- [`hanzoai/operator-core`](https://forge.hanzo.ai/hanzoai/operator-core) — Shared reconciler primitives for the Hanzo, Lux, Zoo, and Osage Kubernetes operators.
+- [`hanzoai/orm`](https://forge.hanzo.ai/hanzoai/orm) — Generics-based ORM for Go — type-safe Model[T] with auto-registration, auto-serialization, KV cache, and multi-backend support (Hanzo SQLite, Hanzo SQL, Hanzo DocDB)
+- [`hanzoai/os`](https://forge.hanzo.ai/hanzoai/os) — Nix flake defining Hanzo's reproducible sandbox images and cluster node configuration.
+- [`hanzoai/otel-collector`](https://forge.hanzo.ai/hanzoai/otel-collector) — Hanzo O11y Otel Collector — Hanzo's OpenTelemetry Collector distro: ZAP-native + OTLP ingest into hanzoai/datastore
+- [`hanzoai/oto`](https://forge.hanzo.ai/hanzoai/oto) — Hanzo Creative AI — oto
+- [`hanzoai/outbound`](https://forge.hanzo.ai/hanzoai/outbound) — The one rule for reaching an address a tenant supplied: judged at the dial, on the address the socket connects to.
+- [`hanzoai/overlord`](https://forge.hanzo.ai/hanzoai/overlord) — Controls macOS via native mouse, keyboard, and screen capture, driven by an AI model through a Streamlit UI.
+- [`hanzoai/oxy`](https://forge.hanzo.ai/hanzoai/oxy) — Go HTTP reverse-proxy library — hanzoai source-fork of traefik/oxy (module github.com/vulcand/oxy/v2). Framework dep of hanzoai/ingress; pinned via go.mod replace.
+- [`hanzoai/paas-demo`](https://forge.hanzo.ai/hanzoai/paas-demo) — Demo — proves the Hanzo native PaaS: built from git by in-cluster BuildKit, calls api.hanzo.ai/v1/chat per request.
+- [`hanzoai/paas-migrate`](https://forge.hanzo.ai/hanzoai/paas-migrate) — Registers Hanzo services with platform.hanzo.ai and triggers deploys through its API.
+- [`hanzoai/pack`](https://forge.hanzo.ai/hanzoai/pack) — Zero-config BuildKit gateway frontend for the Hanzo build fabric
+- [`hanzoai/papers`](https://forge.hanzo.ai/hanzoai/papers) — Mirror of github.com/hanzoai/papers
+- [`hanzoai/papers-template`](https://forge.hanzo.ai/hanzoai/papers-template) — Next.js template for research paper listing sites, deployable to GitHub Pages.
+- [`hanzoai/passport`](https://forge.hanzo.ai/hanzoai/passport) — Simple, unobtrusive authentication for Node.js.
+- [`hanzoai/passport-apple`](https://forge.hanzo.ai/hanzoai/passport-apple) — Passport strategy for Sign in with Apple
+- [`hanzoai/passport-discord`](https://forge.hanzo.ai/hanzoai/passport-discord) — Passport strategy for authentication with Discord (discordapp.com)
+- [`hanzoai/passport-facebook`](https://forge.hanzo.ai/hanzoai/passport-facebook) — Facebook authentication strategy for Passport and Node.js.
+- [`hanzoai/passport-github`](https://forge.hanzo.ai/hanzoai/passport-github) — GitHub authentication strategy for Passport and Node.js.
+- [`hanzoai/passport-google-oauth2`](https://forge.hanzo.ai/hanzoai/passport-google-oauth2) — Google authentication strategy for Passport and Node.js.
+- [`hanzoai/passport-jwt`](https://forge.hanzo.ai/hanzoai/passport-jwt) — Passport authentication using JSON Web Tokens
+- [`hanzoai/passport-ldapauth`](https://forge.hanzo.ai/hanzoai/passport-ldapauth) — LDAP authentication strategy for Passport
+- [`hanzoai/passport-local`](https://forge.hanzo.ai/hanzoai/passport-local) — Username and password authentication strategy for Passport and Node.js.
+- [`hanzoai/passport-saml`](https://forge.hanzo.ai/hanzoai/passport-saml) — SAML 2.0 authentication with Passport
+- [`hanzoai/pdf`](https://forge.hanzo.ai/hanzoai/pdf) — PDF parser for Golang
+- [`hanzoai/persona`](https://forge.hanzo.ai/hanzoai/persona) — Loaders, schemas, and CLI tools for working with Hanzo Personas personality profiles.
+- [`hanzoai/personas`](https://forge.hanzo.ai/hanzoai/personas) — Named persona profiles with authored personality trait data for AI characters.
+- [`hanzoai/php-sdk`](https://forge.hanzo.ai/hanzoai/php-sdk) — The Hanzo API client for PHP.
+- [`hanzoai/pkg`](https://forge.hanzo.ai/hanzoai/pkg) — Self-hosted npm registry (Verdaccio) backed by S3 storage.
+- [`hanzoai/pki`](https://forge.hanzo.ai/hanzoai/pki) — Library for working with certificates and keys
+- [`hanzoai/platform-services`](https://forge.hanzo.ai/hanzoai/platform-services) — Restored from the DigitalOcean evacuation
+- [`hanzoai/playwright`](https://forge.hanzo.ai/hanzoai/playwright) — Playwright is a framework for Web Testing and Automation. It allows testing Chromium, Firefox and WebKit with a single API.
+- [`hanzoai/plugin`](https://forge.hanzo.ai/hanzoai/plugin) — One plugin runtime for Hanzo: Go, JavaScript, WebAssembly and CPython behind one interface
+- [`hanzoai/porto`](https://forge.hanzo.ai/hanzoai/porto) — Go packages
+- [`hanzoai/post`](https://forge.hanzo.ai/hanzoai/post) — Mirror of github.com/hanzoai/social
+- [`hanzoai/postcss`](https://forge.hanzo.ai/hanzoai/postcss) — Transforming styles with JS plugins
+- [`hanzoai/postgres`](https://forge.hanzo.ai/hanzoai/postgres) — Relational database management system (PostgreSQL).
+- [`hanzoai/posthog-python`](https://forge.hanzo.ai/hanzoai/posthog-python)
+- [`hanzoai/prettier`](https://forge.hanzo.ai/hanzoai/prettier) — Prettier is an opinionated code formatter.
+- [`hanzoai/.profile`](https://forge.hanzo.ai/hanzoai/.profile) — Organization profile README for Hanzo.
+- [`hanzoai/ProjectTinySamples`](https://forge.hanzo.ai/hanzoai/ProjectTinySamples) — Samples for Project Tiny
+- [`hanzoai/prompt`](https://forge.hanzo.ai/hanzoai/prompt) — Canonical unified system prompt (# Hanzo Rules) for Hanzo App, Hanzo CLI, Hanzo MCP, and progressive skill discovery via hanzoskills.com
+- [`hanzoai/prompt-sage`](https://forge.hanzo.ai/hanzoai/prompt-sage) — macOS menu bar app that detects and enhances AI prompts before you submit them.
+- [`hanzoai/proofs`](https://forge.hanzo.ai/hanzoai/proofs) — Formal proofs for the Hanzo AI Chain and its agent inference settlement stack.
+- [`hanzoai/proto`](https://forge.hanzo.ai/hanzoai/proto) — Canonical schema definitions for the Hanzo platform (ZAP canonical, pb/ for -tags grpc legacy)
+- [`hanzoai/protobuf.js`](https://forge.hanzo.ai/hanzoai/protobuf.js) — Protocol Buffers for JavaScript and TypeScript. Fast, conformant, and versatile. No protoc required.
+- [`hanzoai/proxy`](https://forge.hanzo.ai/hanzoai/proxy) — Reach the web without holding the network — one semantic ask, N proxy vendors, credentials that never enter the sandbox.
+- [`hanzoai/psrpc`](https://forge.hanzo.ai/hanzoai/psrpc) — PSRPC for Hanzo LiveKit — fork of livekit/psrpc retargeted at github.com/hanzokv/go
+- [`hanzoai/pubsub`](https://forge.hanzo.ai/hanzoai/pubsub) — High-performance event streaming and message queue
+- [`hanzoai/pubsub-go`](https://forge.hanzo.ai/hanzoai/pubsub-go) — Hanzo PubSub Go SDK - Go client for Hanzo PubSub (NATS)
+- [`hanzoai/puppeteer`](https://forge.hanzo.ai/hanzoai/puppeteer) — JavaScript API for Chrome and Firefox
+- [`hanzoai/pymssql`](https://forge.hanzo.ai/hanzoai/pymssql) — Python DB-API interface to Microsoft SQL Server, built on FreeTDS.
+- [`hanzoai/python-sdk`](https://forge.hanzo.ai/hanzoai/python-sdk)
+- [`hanzoai/queues`](https://forge.hanzo.ai/hanzoai/queues) — Distributed work queue service with priority, delayed, and exactly-once message processing.
+- [`hanzoai/quickjs-emscripten`](https://forge.hanzo.ai/hanzoai/quickjs-emscripten) — Safely execute untrusted Javascript in your Javascript, and execute synchronous code that uses async functions
+- [`hanzoai/react`](https://forge.hanzo.ai/hanzoai/react) — The library for web and native user interfaces.
+- [`hanzoai/react-drawer`](https://forge.hanzo.ai/hanzoai/react-drawer) — Unstyled drawer component for React, usable as a mobile-friendly dialog replacement.
+- [`hanzoai/react-pug-stylus-mobx-boilerplate`](https://forge.hanzo.ai/hanzoai/react-pug-stylus-mobx-boilerplate) — Boilerplate for React apps using Pug templates, Stylus styling, and MobX state management.
+- [`hanzoai/redis`](https://forge.hanzo.ai/hanzoai/redis) — RETIRED — Redis import, referenced by no manifest in universe or operator. Hanzo stores state in Base/SQLite, and Hanzo KV where a key/value store is needed.
+- [`hanzoai/registry`](https://forge.hanzo.ai/hanzoai/registry) — Docker container registry with Hanzo IAM token authentication
+- [`hanzoai/relay`](https://forge.hanzo.ai/hanzoai/relay) — Rust relay client that registers and remote-controls local Hanzo app instances from app.hanzo.bot.
+- [`hanzoai/remove-refusals`](https://forge.hanzo.ai/hanzoai/remove-refusals)
+- [`hanzoai/render`](https://forge.hanzo.ai/hanzoai/render) — Hanzo Studio's render workers: HTML, documents, slides, compositions and video edits into files
+- [`hanzoai/repl`](https://forge.hanzo.ai/hanzoai/repl) — Interactive REPL for testing Hanzo MCP tools with IPython-based chat integration.
+- [`hanzoai/replicate`](https://forge.hanzo.ai/hanzoai/replicate) — Streaming replication for SQLite.
+- [`hanzoai/research`](https://forge.hanzo.ai/hanzoai/research) — Hanzo Research SDK (Go) — zero-config /v1/research self-logging client: structure runs as falsifiable tests (hypothesis → verdict), byte-compatible with the Python/Rust/C++ SDKs, u
+- [`hanzoai/reward`](https://forge.hanzo.ai/hanzoai/reward) — Rewards rules engine: programs, rules, claims, an append-only points ledger.
+- [`hanzoai/rfc`](https://forge.hanzo.ai/hanzoai/rfc) — Documentation site template for RFC-style proposals like HIPs, LPs, and ZIPs.
+- [`hanzoai/ROCm`](https://forge.hanzo.ai/hanzoai/ROCm) — Hanzo downstream of AMD ROCm (MIT), manifest pinned to rocm-7.2.0 for gfx builds
+- [`hanzoai/rocm-rs`](https://forge.hanzo.ai/hanzoai/rocm-rs) — Hanzo fork of rocm-rs — cross-platform (Linux + Windows/MSVC) ROCm bindings for gfx1151: portable enum/status types, edition-2024 unsafe blocks, gated amdgcn GPU-sort kernel.
+- [`hanzoai/rollout`](https://forge.hanzo.ai/hanzoai/rollout) — Progressive deployment library with health checks and automatic rollback across environments.
+- [`hanzoai/router`](https://forge.hanzo.ai/hanzoai/router) — Pure-Rust engine that routes requests across local and cloud models by memory, capability, and cost.
+- [`hanzoai/runner`](https://forge.hanzo.ai/hanzoai/runner) — Container image for self-hosted GitHub Actions runners used by Hanzo CI.
+- [`hanzoai/runtime`](https://forge.hanzo.ai/hanzoai/runtime) — Sandboxed runtime for executing AI-generated code securely and quickly.
+- [`hanzoai/rustautogui`](https://forge.hanzo.ai/hanzoai/rustautogui) — Rust library for cross-platform mouse, keyboard, and screen-image automation.
+- [`hanzoai/ryo-token`](https://forge.hanzo.ai/hanzoai/ryo-token) — Solidity smart contracts for the Ryo utility token used to access Hanzo's blockchain platform.
+- [`hanzoai/s3`](https://forge.hanzo.ai/hanzoai/s3) — Hanzo S3 — S3-compatible distributed object storage
+- [`hanzoai/s3-cli`](https://forge.hanzo.ai/hanzoai/s3-cli) — Command-line client for S3-compatible storage, with ls, cp, mirror, and other UNIX-style commands.
+- [`hanzoai/s3-csi`](https://forge.hanzo.ai/hanzoai/s3-csi) — ZAP-native CSI driver for the Hanzo filer (hanzoai/s3). No protobuf.
+- [`hanzoai/s3-go`](https://forge.hanzo.ai/hanzoai/s3-go) — Go client SDK for Hanzo S3, an S3-compatible object storage service.
+- [`hanzoai/safe`](https://forge.hanzo.ai/hanzoai/safe) — Safe multisig and DAO signer contracts shared by Hanzo apps.
+- [`hanzoai/sandbox-push-proof`](https://forge.hanzo.ai/hanzoai/sandbox-push-proof) — Restored from the DigitalOcean evacuation
+- [`hanzoai/scarf-js`](https://forge.hanzo.ai/hanzoai/scarf-js) — Installation analytics for your npm package
+- [`hanzoai/sdk`](https://forge.hanzo.ai/hanzoai/sdk) — Hanzo AI SDK — one install, every service, every language.
+- [`hanzoai/search-fts5`](https://forge.hanzo.ai/hanzoai/search-fts5) — Meili-API-compatible SQLite FTS5 search shim (native full-text for Hanzo Chat)
+- [`hanzoai/search-go`](https://forge.hanzo.ai/hanzoai/search-go) — Go client for Hanzo Index.
+- [`hanzoai/semantic`](https://forge.hanzo.ai/hanzoai/semantic) — Knowledge graphs, context graphs and decision intelligence for agents — native Go
+- [`hanzoai/senkai`](https://forge.hanzo.ai/hanzoai/senkai) — Sekai-1 Alpha API cookbook: clients, Hanzo ML input preparation, Research SDK and forwarding gateways. Model is proprietary.
+- [`hanzoai/sensei.group`](https://forge.hanzo.ai/hanzoai/sensei.group)
+- [`hanzoai/sentinel`](https://forge.hanzo.ai/hanzoai/sentinel) — Hanzo Sentry — Error tracking and performance monitoring
+- [`hanzoai/service-template`](https://forge.hanzo.ai/hanzoai/service-template) — Starter template for building a Go backend service on the Hanzo stack.
+- [`hanzoai/session`](https://forge.hanzo.ai/hanzoai/session) — Simple session middleware for Express
+- [`hanzoai/shadcn`](https://forge.hanzo.ai/hanzoai/shadcn) — The shadcn-compatible React surface extracted from @hanzo/ui. Radix behaviour, Tailwind styling, standard shadcn tokens. @hanzo/ui renders on @hanzo/gui now; this is where its shad
+- [`hanzoai/sharer`](https://forge.hanzo.ai/hanzoai/sharer) — A screen-sharing / remote collaboration software written in Rust
+- [`hanzoai/sharp`](https://forge.hanzo.ai/hanzoai/sharp) — High performance Node.js image processing, the fastest module to resize JPEG, PNG, WebP, AVIF and TIFF images. Uses the libvips library.
+- [`hanzoai/sho`](https://forge.hanzo.ai/hanzoai/sho) — Research code for a diffusion-based large language model, an alternative to autoregressive decoding.
+- [`hanzoai/shopping.js`](https://forge.hanzo.ai/hanzoai/shopping.js) — Shopping framework for JavaScript.
+- [`hanzoai/sigv4`](https://forge.hanzo.ai/hanzoai/sigv4) — Go HTTP RoundTripper that signs requests with AWS Signature Version 4.
+- [`hanzoai/simple-coredns-manager`](https://forge.hanzo.ai/hanzoai/simple-coredns-manager) — Lightweight web UI for managing CoreDNS configuration — edit Corefile & host files with diff preview, one-click reload via Docker. Built for MWIT-LINK.
+- [`hanzoai/sites`](https://forge.hanzo.ai/hanzoai/sites)
+- [`hanzoai/skill`](https://forge.hanzo.ai/hanzoai/skill) — CLI to read, check, and install AI agent skills.
+- [`hanzoai/skills`](https://forge.hanzo.ai/hanzoai/skills) — A skill library that gives Claude Code targeted development knowledge without loading it all upfront.
+- [`hanzoai/smtp-relay`](https://forge.hanzo.ai/hanzoai/smtp-relay) — HTTP API that relays outgoing email messages to SMTP servers.
+- [`hanzoai/spa`](https://forge.hanzo.ai/hanzoai/spa) — Zero-config static file server for single-page apps, with caching, compression, and IAM-gated access.
+- [`hanzoai/speech`](https://forge.hanzo.ai/hanzoai/speech) — CPU speech service: STT (faster-whisper) + TTS (kokoro) behind api.hanzo.ai /v1/audio
+- [`hanzoai/sql`](https://forge.hanzo.ai/hanzoai/sql) — Hanzo SQL — the relational engine. Not "postgres"; that was the upstream.
+- [`hanzoai/sqlbuilder`](https://forge.hanzo.ai/hanzoai/sqlbuilder)
+- [`hanzoai/sqlcipher`](https://forge.hanzo.ai/hanzoai/sqlcipher) — Pure-Go SQLCipher 4 page format — codec, KDF, per-page HMAC. Byte-compatible with SQLCipher 4.
+- [`hanzoai/sqlite`](https://forge.hanzo.ai/hanzoai/sqlite) — Hanzo SQLite
+- [`hanzoai/sqlite-vec`](https://forge.hanzo.ai/hanzoai/sqlite-vec) — A vector search SQLite extension that runs anywhere!
+- [`hanzoai/sql-meta`](https://forge.hanzo.ai/hanzoai/sql-meta)
+- [`hanzoai/sql-vector`](https://forge.hanzo.ai/hanzoai/sql-vector) — Hanzo SQL with the vector extension for AI/ML workloads
+- [`hanzoai/stack`](https://forge.hanzo.ai/hanzoai/stack) — Docker Compose quickstart to run the Hanzo AI platform locally.
+- [`hanzoai/standard`](https://forge.hanzo.ai/hanzoai/standard) — Standardized project scaffold and build tooling for serverless JavaScript applications.
+- [`hanzoai/static`](https://forge.hanzo.ai/hanzoai/static) — Static file and SPA serving middleware for Hanzo Ingress (Traefik) with gzip compression and cache-control.
+- [`hanzoai/stats`](https://forge.hanzo.ai/hanzoai/stats) — Stats dashboard library with client-side SQLite queries, chart configs, and data providers.
+- [`hanzoai/status`](https://forge.hanzo.ai/hanzoai/status) — White-labelable status monitoring page
+- [`hanzoai/status-web3`](https://forge.hanzo.ai/hanzoai/status-web3) — Status dashboard for blockchain networks, services, and deployed contracts.
+- [`hanzoai/store`](https://forge.hanzo.ai/hanzoai/store) — Marketplace for AI agent tools and MCP servers for Hanzo Desktop.
+- [`hanzoai/store-api`](https://forge.hanzo.ai/hanzoai/store-api) — API server for tool listings, prompt templates, and default configuration in the Hanzo ecosystem.
+- [`hanzoai/stream`](https://forge.hanzo.ai/hanzoai/stream) — Kafka protocol adapter that lets standard Kafka clients run against Hanzo's NATS-based pub/sub.
+- [`hanzoai/studio`](https://forge.hanzo.ai/hanzoai/studio) — Hanzo Studio: a chat that makes images, posters, documents, slides, type systems, 3D, video and sound, each in a tab beside it.
+- [`hanzoai/styleguide`](https://forge.hanzo.ai/hanzoai/styleguide) — Coding conventions for the hanzoai, zooai and luxfi estate. Original, CC0.
+- [`hanzoai/svelte`](https://forge.hanzo.ai/hanzoai/svelte) — @hanzo/svelte — the Svelte 5 backend for Hanzo UI. Extracted from @hanzo/ui so the core library stays single-stack; same components, same tokens.
+- [`hanzoai/swc`](https://forge.hanzo.ai/hanzoai/swc) — Rust-based platform for the Web
+- [`hanzoai/SwiftMCP`](https://forge.hanzo.ai/hanzoai/SwiftMCP) — Swift package implementing an MCP client for iOS and macOS with a JSON-RPC interface.
+- [`hanzoai/swift-sdk`](https://forge.hanzo.ai/hanzoai/swift-sdk) — Hanzo Swift SDK — landing. Real code → hanzo-swift/sdk (SwiftPM, generated from the Hanzo OpenAPI spec).
+- [`hanzoai/synth`](https://forge.hanzo.ai/hanzoai/synth)
+- [`hanzoai/tabs`](https://forge.hanzo.ai/hanzoai/tabs)
+- [`hanzoai/tagger`](https://forge.hanzo.ai/hanzoai/tagger) — Vite plugin that tags JSX and TSX components with data attributes for easier debugging.
+- [`hanzoai/tailwindcss`](https://forge.hanzo.ai/hanzoai/tailwindcss) — A utility-first CSS framework for rapid UI development.
+- [`hanzoai/tailwindcss-typography`](https://forge.hanzo.ai/hanzoai/tailwindcss-typography) — Beautiful typographic defaults for HTML you don't control.
+- [`hanzoai/tasks`](https://forge.hanzo.ai/hanzoai/tasks)
+- [`hanzoai/team`](https://forge.hanzo.ai/hanzoai/team) — Hanzo Team — the workspace served at hanzo.team
+- [`hanzoai/team2`](https://forge.hanzo.ai/hanzoai/team2) — Hanzo Team UI — the new frontend on @hanzo/gui over the team backend
+- [`hanzoai/team-go`](https://forge.hanzo.ai/hanzoai/team-go) — The Go transactor and account service behind hanzo.team — one binary, no microservices.
+- [`hanzoai/telemetry`](https://forge.hanzo.ai/hanzoai/telemetry) — [ARCHIVED] Superseded by hanzoai/otel-collector — this kept upstream's module path (go.opentelemetry.io/collector), so nothing could import it without a replace directive, and none
+- [`hanzoai/templates`](https://forge.hanzo.ai/hanzoai/templates) — Collection of prebuilt UI templates for dashboards, landing pages, portfolios, and ecommerce sites.
+- [`hanzoai/templates-blueprints`](https://forge.hanzo.ai/hanzoai/templates-blueprints) — Catalog of one-click deploy templates for the Hanzo PaaS at platform.hanzo.ai.
+- [`hanzoai/themes`](https://forge.hanzo.ai/hanzoai/themes) — Hanzo theme presets for coding harnesses — Claude Code, Codex, hanzo dev (native theme formats)
+- [`hanzoai/theming`](https://forge.hanzo.ai/hanzoai/theming) — Theming toolkit for white-label apps: seed colors become full palettes and CSS variables.
+- [`hanzoai/thinking`](https://forge.hanzo.ai/hanzoai/thinking)
+- [`hanzoai/trace-js`](https://forge.hanzo.ai/hanzoai/trace-js) — 🪢 trace JS/TS SDKs - Instrument your LLM app and get detailed tracing/observability. Works with any LLM or framework
+- [`hanzoai/traces`](https://forge.hanzo.ai/hanzoai/traces) — Distributed tracing backend using object storage, integrated with Grafana and Prometheus.
+- [`hanzoai/tractor-beam`](https://forge.hanzo.ai/hanzoai/tractor-beam) — JavaScript library for drag-and-drop folder uploads using the Directory Upload API proposal.
+- [`hanzoai/tractor-beam-gcs`](https://forge.hanzo.ai/hanzoai/tractor-beam-gcs) — Google Cloud Storage plugin for Tractor Beam.
+- [`hanzoai/tractor-beam-xhr`](https://forge.hanzo.ai/hanzoai/tractor-beam-xhr)
+- [`hanzoai/trolley-bench`](https://forge.hanzo.ai/hanzoai/trolley-bench) — Trolley bench: Kai and frontier models on trolley-problem states, with runners, raw answers and analysis
+- [`hanzoai/trpc-openapi`](https://forge.hanzo.ai/hanzoai/trpc-openapi)
+- [`hanzoai/trust`](https://forge.hanzo.ai/hanzoai/trust)
+- [`hanzoai/tsgo`](https://forge.hanzo.ai/hanzoai/tsgo) — Staging repo for development of native port of TypeScript
+- [`hanzoai/ts-node`](https://forge.hanzo.ai/hanzoai/ts-node) — TypeScript execution and REPL for node.js
+- [`hanzoai/tts`](https://forge.hanzo.ai/hanzoai/tts) — LLM-based text-to-speech training and inference framework using audio codec tokens.
+- [`hanzoai/tunnel`](https://forge.hanzo.ai/hanzoai/tunnel)
+- [`hanzoai/turborepo`](https://forge.hanzo.ai/hanzoai/turborepo) — Build system optimized for JavaScript and TypeScript, written in Rust
+- [`hanzoai/types`](https://forge.hanzo.ai/hanzoai/types) — Values the Hanzo fleet shares. Standard library only.
+- [`hanzoai/TypeScript`](https://forge.hanzo.ai/hanzoai/TypeScript) — TypeScript is a superset of JavaScript that compiles to clean JavaScript output.
+- [`hanzoai/ubuntu`](https://forge.hanzo.ai/hanzoai/ubuntu) — Base Ubuntu container image used as the foundation for Hanzo's Docker images.
+- [`hanzoai/ui`](https://forge.hanzo.ai/hanzoai/ui) — React component library for AI applications
+- [`hanzoai/ui-customization`](https://forge.hanzo.ai/hanzoai/ui-customization) — Go service serving Hanzo console UI branding and customization config over ZAP RPC.
+- [`hanzoai/unrs-resolver`](https://forge.hanzo.ai/hanzoai/unrs-resolver) — Rust port of webpack/enhanced-resolve with PNP support
+- [`hanzoai/uta`](https://forge.hanzo.ai/hanzoai/uta) — Hanzo Creative AI — uta
+- [`hanzoai/utf-8-validate`](https://forge.hanzo.ai/hanzoai/utf-8-validate) — Check if a buffer contains valid UTF-8
+- [`hanzoai/uuid`](https://forge.hanzo.ai/hanzoai/uuid) — Generate RFC-compliant UUIDs in JavaScript
+- [`hanzoai/vault`](https://forge.hanzo.ai/hanzoai/vault) — PCI-compliant card tokenization vault (CDE)
+- [`hanzoai/vector`](https://forge.hanzo.ai/hanzoai/vector) — High-performance vector database for AI embeddings
+- [`hanzoai/vector-go`](https://forge.hanzo.ai/hanzoai/vector-go) — Hanzo Vector Go SDK - Go client for Hanzo Vector (Qdrant)
+- [`hanzoai/ventures`](https://forge.hanzo.ai/hanzoai/ventures) — hanzo.ventures — Hanzo Ventures
+- [`hanzoai/vfs`](https://forge.hanzo.ai/hanzoai/vfs) — S3-backed virtual block filesystem with PQ encryption — unlimited write storage for stateful services
+- [`hanzoai/video`](https://forge.hanzo.ai/hanzoai/video) — Agent-driven tool that scripts, sources footage, edits, and renders a finished video from a text prompt.
+- [`hanzoai/viem`](https://forge.hanzo.ai/hanzoai/viem) — TypeScript Interface for Ethereum
+- [`hanzoai/visor`](https://forge.hanzo.ai/hanzoai/visor) — Mirrored from github.com/hanzoai/visor
+- [`hanzoai/vite`](https://forge.hanzo.ai/hanzoai/vite) — Next generation frontend tooling. It's fast!
+- [`hanzoai/vitest`](https://forge.hanzo.ai/hanzoai/vitest) — Next generation testing framework powered by Vite.
+- [`hanzoai/vm`](https://forge.hanzo.ai/hanzoai/vm) — Hanzo VM — native microVMs for agents: Virtualization.framework on macOS, KVM on Linux. Mounts, checkpoints, port forwards, egress policy, secret injection.
+- [`hanzoai/voice`](https://forge.hanzo.ai/hanzoai/voice) — Mirror of git.hanzo.ai/hanzoai/voice — canonical source is the forge
+- [`hanzoai/volume`](https://forge.hanzo.ai/hanzoai/volume) — Node-local persistent volumes for a Hanzo cluster.
+- [`hanzoai/waitlist`](https://forge.hanzo.ai/hanzoai/waitlist) — Brand-neutral waitlist widget with referral sharing, backed by Hanzo Base.
+- [`hanzoai/wan2.2`](https://forge.hanzo.ai/hanzoai/wan2.2) — Open video generation models supporting text-to-video and image-to-video synthesis.
+- [`hanzoai/wasm`](https://forge.hanzo.ai/hanzoai/wasm) — WebAssembly in the calling process — a thin wrapper over wazero
+- [`hanzoai/wasm2go`](https://forge.hanzo.ai/hanzoai/wasm2go) — High-performance ahead-of-time WebAssembly to Go compiler with SSA optimization and native assembly emission
+- [`hanzoai/workbox`](https://forge.hanzo.ai/hanzoai/workbox) — 📦 Workbox: JavaScript libraries for Progressive Web Apps
+- [`hanzoai/works`](https://forge.hanzo.ai/hanzoai/works) — hanzo.works — the apps a company runs on, served as capabilities on one API
+- [`hanzoai/world-zap`](https://forge.hanzo.ai/hanzoai/world-zap) — Gateway serving Hanzo World real-time feeds over MCP and ZAP protocols.
+- [`hanzoai/xorm`](https://forge.hanzo.ai/hanzoai/xorm) — Hanzo xorm — a simple and powerful ORM for Go (fork of xorm, BSD-3-Clause)
+- [`hanzoai/xorm-adapter`](https://forge.hanzo.ai/hanzoai/xorm-adapter) — Casbin xorm adapter — fork of hanzoid/xorm-adapter
+- [`hanzoai/yaegi`](https://forge.hanzo.ai/hanzoai/yaegi) — Yaegi is Another Elegant Go Interpreter
+- [`hanzoai/yoga`](https://forge.hanzo.ai/hanzoai/yoga) — Yoga is an embeddable layout engine targeting web standards.
+- [`hanzoai/zap`](https://forge.hanzo.ai/hanzoai/zap) — Rust runtime for ZAP, the binary RPC protocol used for service-to-service communication.
+- [`hanzoai/zap-es`](https://forge.hanzo.ai/hanzoai/zap-es) — Archived TypeScript ZAP wire encoder; superseded by @zap-proto/zap.
+- [`hanzoai/zen`](https://forge.hanzo.ai/hanzoai/zen)
+- [`hanzoai/zen-dub`](https://forge.hanzo.ai/hanzoai/zen-dub) — Zen Dub - Real-time high-quality lip-sync model
+- [`hanzoai/zip`](https://forge.hanzo.ai/hanzoai/zip) — DEPRECATED — dead fork. Canonical: github.com/zap-proto/zip. Do not import.
+- [`hanzoai/zip-js`](https://forge.hanzo.ai/hanzoai/zip-js) — TypeScript SDK for hanzoai/zip-mounted handlers — goja (native) + Javy (wasm) backends. #[handler]-equivalent for TS.
+- [`hanzoai/zip-rs`](https://forge.hanzo.ai/hanzoai/zip-rs) — Rust crate for writing zip-mounted wasm handlers (HIP-0105)
+- [`hanzoai/zod`](https://forge.hanzo.ai/hanzoai/zod) — TypeScript-first schema validation with static type inference
