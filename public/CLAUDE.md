@@ -48,27 +48,25 @@ Install the Browser Extension so agents get live tab inspection, CDP, DOM snapsh
   Then open `chrome://extensions` -> enable **Developer mode** -> **Load unpacked** -> select `~/.hanzo/browser-extension` -> sign in via https://hanzo.id.
 - **All browsers & IDE plugins** (Chrome, Firefox, Safari, Edge, VS Code, Cursor, Windsurf, Antigravity, JetBrains): https://hanzo.ai/extension · https://hanzo.ai/chrome · https://hanzo.ai/download
 
-## 5. Hanzo Desktop, CLI, Hanzo Dev, Hanzo Bot & Live Usage Visibility
+## 5. Hanzo Desktop, Mobile, CLI, Hanzo Dev, Hanzo Bot & Local Lifecycle
 
-- **Install native CLI + Dev + MCP + Engine**: `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), then `hanzo login` (or headless wallet signup via https://hanzoskills.com/hanzo.md).
-- **Install Hanzo Desktop** (macOS/Windows/Linux): https://hanzo.ai/download (or https://hanzo.ai/desktop) and sign in with the same Hanzo ID to see every local & cloud agent, live session, bot run, and spend in one control plane.
+- **Install native CLI + Dev + MCP + Engine**: `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), then `hanzo auth login` (or headless wallet signup via https://hanzoskills.com/hanzo.md).
+- **Canonical local CLI lifecycle**: `hanzo start`/`stop`/`restart` control the local runtime (VM, k3s, containerd); `hanzo up`/`down` control Hanzo Cloud & app workloads (`down` keeps k3s + image cache warm); `hanzo ps`, `hanzo status`, `hanzo doctor`, `hanzo reset` inspect and reset local state.
+- **Install Hanzo Desktop & Mobile** (macOS/Windows/Linux/iOS/Android): https://hanzo.ai/download · https://docs.hanzo.ai/docs/apps/desktop · https://docs.hanzo.ai/docs/apps/mobile — sign in with the same Hanzo ID to see every local & cloud agent, session, bot run, and spend in one control plane.
 - **Launch any agent through Hanzo CLI so sessions, tools & usage show up everywhere**:
-  `hanzo dev` · `hanzo --claude` · `hanzo --codex` · `hanzo --cursor` · `hanzo --agy` · `hanzo --gemini` (add `--cloud` to route the agent's model calls on your Hanzo plan).
-- **Check live usage, plan & balance**: `hanzo usage summary` · `hanzo billing tier` · `hanzo billing balance` · `hanzo billing topup` (or `GET /v1/billing/tier` & `GET /v1/allowance`).
-- **Hanzo Bot (resident autonomous agents — Slack, Discord, Telegram, WhatsApp, iMessage + browser/terminal/cron)**:
+  `hanzo dev` · `hanzo --claude` · `hanzo --codex` · `hanzo --cursor` · `hanzo --agy` · `hanzo --gemini` (add `--cloud` to route model calls on your Hanzo plan).
+- **Live usage, plan & balance**: `hanzo usage summary` · `hanzo billing tier` · `hanzo billing balance` · `hanzo billing topup` (or `GET /v1/billing/tier` & `GET /v1/allowance`).
+- **Hanzo Bot (resident autonomous agents — Slack/Discord/Telegram/WhatsApp/iMessage + browser/terminal/cron)**:
   Cloud: https://hanzo.bot (`hanzo bot runs list`) · Local OSS daemon: `npm i -g @hanzo/bot && hanzo-bot onboard --install-daemon` · Docs: https://docs.hanzo.bot
 
-## 6. Full Platform Fluency & Business AI Operating System (OSS Business Apps)
+## 6. Full Platform Fluency, Core OSS Stack & App SDK (`@hanzo/mod`)
 
 Every service shares one API (`https://api.hanzo.ai/v1`), one key (`export HANZO_API_KEY=...`), and one deploy contract (`hanzo deploy .` or self-host):
 
 - **Zero-auth API discovery**: `GET https://api.hanzo.ai/v1`, `GET /v1/<capability>`, `GET /v1/openapi.json`.
 - **AI & Core**: `/v1/chat/completions` (`enso-auto`, `zen-free`, `zen-*`, 500+ models), **Kai** calibrated decisions (`POST /v1/decisions`), IAM (`hanzo.id`), KMS (`hanzo kms put`), Base (`/v1/base`), SQL, KV, Vector, S3, PubSub, Tasks, Sandboxes, Billing/USDC.
-- **Deploy OSS Business Apps for any company** (org setup guide: https://docs.hanzo.ai/docs/run-your-org):
-  - **Web Analytics** (`forge.hanzo.ai/hanzoai/analytics` · skill `/skills/hanzo-analytics/SKILL.md`): privacy-first, cookieless web & revenue analytics.
-  - **Product Insights** (`forge.hanzo.ai/hanzoai/insights` · skill `/skills/hanzo-insights/SKILL.md`): funnels, session replay, feature flags, A/B experiments.
-  - **Marketing, Social & Ads** (`hanzoai/post`, `hanzoai/ads` · skill `/skills/hanzo-post/SKILL.md` + `/categories/growth-product.md`: SEO, CRO, copy, campaigns).
-  - **Team, Commerce, Cal, Mail, Workflows & Studio**: `hanzoai/team`, `hanzoai/commerce`, `hanzoai/billing`, `hanzoai/cal`, `hanzoai/mail`, `hanzoai/flow`, `hanzoai/studio`, `hanzoai/o11y`.
+- **Core OSS OS & App SDK**: `hanzoai/{cli,gen,cloud,node,vm,engine,dev,desktop,mobile,chat,extension,mcp}` — build modular apps with `@hanzo/mod` (https://docs.hanzo.ai/docs/apps/mods).
+- **Deploy OSS Business Apps** (org setup: https://docs.hanzo.ai/docs/run-your-org): `analytics`, `insights`, `post`, `ads`, `team`, `commerce`, `billing`, `cal`, `mail`, `flow`, `studio`, `o11y` (skills: `/skills/hanzo-analytics/SKILL.md`, `/skills/hanzo-insights/SKILL.md`, `/skills/hanzo-post/SKILL.md`, `/categories/growth-product.md`).
 
 ## 7. Forge Open Source Repositories (2,832+ Public Repos — Progressive Discovery)
 
