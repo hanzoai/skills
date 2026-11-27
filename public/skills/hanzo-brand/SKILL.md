@@ -12,67 +12,47 @@ Brand assets, color palette, typography, and guidelines for the Hanzo ecosystem.
 | Asset | Location | npm Package |
 |-------|----------|-------------|
 | Logo (all formats) | `github.com/hanzoai/logo` (`dist/` directory) | `@hanzo/logo` |
-| Design tokens | `github.com/hanzoai/tokens` | `@hanzo/tokens` |
+| Design tokens | `github.com/hanzoai/ui` (`packages/tokens`) | `@hanzo/tokens` |
 | Fonts (Zen / Zen Mono) | `github.com/hanzoai/font` | `@hanzo/font` |
 | Brand guidelines | `github.com/hanzoai/brand` | `@hanzo/brand` |
 | UI components | `github.com/hanzoai/ui` | `@hanzo/ui` |
 
 ## Colors
 
-**Monochrome only — black and white, light and dark following the device.** There is **no Hanzo Red** (and no brand accent color, neon, or gradient glow). All surfaces consume `@hanzo/tokens`.
+Hanzo is **pure monochrome**: black, white, and greys. There is no brand colour: no red, no accent hue, no gradient text. Colour appears only inside Hanzo's own media (art, video) and semantic status tokens (`--state-error`, `--state-warning`, `--state-success`, `--state-online`, `--destructive`), never as brand UI chrome. `@hanzo/brand` states `"pure monochrome (black + white), no color accent"`; all values come from `@hanzo/tokens`.
 
-| Token | Light | Dark | Usage |
-|-------|-------|------|-------|
-| Background (`surface1`) | `#ffffff` | `#000000` | Primary page canvas |
-| Elevated (`surface2`) | `#fafafa` | `#111111` | Cards, panels, modals |
-| Foreground (`neutral1`) | `#0a0a0a` | `#fafafa` | Primary text and marks |
-| Primary CTA (`accent1`) | `#000000` | `#ffffff` | Primary buttons and active states |
-| Muted (`neutral2`) | `rgba(10,10,10,0.6)` | `rgba(250,250,250,0.6)` | Secondary text |
-| Border | `rgba(10,10,10,0.12)` | `#262626` | Hairline dividers and card borders |
+Every Hanzo surface ships **light and dark**, following the device (`prefers-color-scheme`).
 
-**NOTE**: Do not use `#d81c33`, `#fd4444`, cyan/purple glows, or custom brand accent colors. Hanzo is strictly monochrome across marketing, apps, chat, IAM, and docs.
+| Role | Dark | Light | Token |
+|------|------|-------|-------|
+| Page | `#0a0a0a` (`#000000` on `--pure-black` pages) | `#f7f7f7` | `--background` / `--pure-black` |
+| Card / surface | `#0f0f0f` | `#f2f2f2` | `--card` |
+| Text | `#e5e5e5` (`#fafafa` on `--text-primary`) | `#0a0a0a` | `--foreground` / `--text-primary` |
+| Muted text | `#a3a3a3` | `#525252` | `--muted-foreground` |
+| Border | `rgba(255,255,255,.10)` | `rgba(0,0,0,.10)` | `--border` |
+| Primary button | `#fafafa` fill, `#0a0a0a` text | `#0a0a0a` fill, `#fafafa` text | `--primary` / `--primary-foreground` |
 
-### CSS Variables
+**Retired, do not reintroduce:** "Hanzo Red" `#d81c33`, and the old Hanzo Chat accent `#fd4444`.
+
+### CSS
+
+Use the tokens rather than hand-written colour variables:
 
 ```css
-/* Prefer importing semantic tokens directly from @hanzo/tokens */
-:root {
-  --background: #ffffff;
-  --surface: #fafafa;
-  --foreground: #0a0a0a;
-  --accent: #000000;
-  --muted: rgba(10, 10, 10, 0.6);
-  --border: rgba(10, 10, 10, 0.12);
-}
-
-.dark {
-  --background: #000000;
-  --surface: #111111;
-  --foreground: #fafafa;
-  --accent: #ffffff;
-  --muted: rgba(250, 250, 250, 0.6);
-  --border: #262626;
-}
+@import '@hanzo/tokens/css'; /* dark on :root; the .light class switches the palette */
 ```
 
-### Tailwind Config
+To follow the device, a tiny script toggles the `light` class on `<html>` from `matchMedia('(prefers-color-scheme: light)')` before first paint.
+
+### Tailwind
 
 ```typescript
-// tailwind.config.ts — consume @hanzo/tokens semantic variables
-export default {
-  theme: {
-    extend: {
-      colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        surface: "var(--surface)",
-        muted: "var(--muted)",
-        border: "var(--border)",
-      },
-    },
-  },
-}
+// Tailwind 3
+import { hanzoTheme } from "@hanzo/tokens/tailwind"
+export default { theme: { extend: hanzoTheme } }
 ```
+
+On Tailwind 4, map the semantic tokens in `@theme inline` (`--color-background: var(--background)`, `--color-foreground: var(--foreground)`, and so on).
 
 ## Logo
 
@@ -130,7 +110,7 @@ When rebranding a fork for the Hanzo ecosystem:
 
 1. **Display text only**: Replace user-visible strings, NOT code identifiers
 2. **Logo swap**: Direct SVG replacement, don't modify JS class names
-3. **Colors**: Map Tailwind config and CSS variables to monochrome `@hanzo/tokens` (black and white, light + dark)
+3. **Colors**: Replace the fork's accent with Hanzo's monochrome tokens (`@hanzo/tokens`). No red, no brand hue; preserve semantic status tokens only.
 4. **Translations**: Update i18n/localization files
 5. **URLs**: Update documentation links and API endpoints
 6. **Internal names**: Keep internal package names if they're npm dependencies
@@ -145,7 +125,7 @@ When rebranding a fork for the Hanzo ecosystem:
 | Renaming npm package imports | Build failure | Keep internal package names |
 | Changing CSS class names | Broken styles | Only change Tailwind theme values |
 | sed on i18n keys | Missing translations | Only change i18n values, not keys |
-| Using `#d81c33`, `#fd4444`, or neon accents | Off-brand | Monochrome black & white via `@hanzo/tokens` |
+| Adding a brand colour (e.g. `#d81c33`, `#fd4444`, neon) | Off-brand | Monochrome `@hanzo/tokens` only; colour only inside media and semantic status tokens |
 
 ## Product Names
 

@@ -47,4 +47,4 @@ pnpm run frontend
 ## Upstream
 - Fork of: danny-avila/LibreChat
 - Behind upstream: ~3,200 commits
-- Branding: Monochrome (`@hanzo/tokens`), Zen font, "Hanzo Chat" title, block-H logo (`@hanzo/logo`)
+- Branding: Hanzo monochrome via `@hanzo/tokens` (see `hanzo/hanzo-brand.md`), Zen font, "Hanzo Chat" title, block-H logo (`@hanzo/logo`). The fork's old red accent `#fd4444` is retired; replace it, don't copy it.
