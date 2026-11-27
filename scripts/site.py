@@ -900,7 +900,7 @@ def write(path, text):
     and the one file this pass rewrites twice did not.
     """
     tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
         f.flush()
         os.fsync(f.fileno())
@@ -942,6 +942,7 @@ def front(text):
     the skills here use. A key whose value is a list or mapping maps to "". A plain
     scalar YAML refuses (": " inside it, a trailing ":", a leading indicator) raises
     ValueError, as a YAML loader would refuse the file."""
+    text = text.replace("\r\n", "\n")
     if not text.startswith("---\n"):
         return {}
     end = text.find("\n---\n", 3)
