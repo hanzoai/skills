@@ -55,7 +55,7 @@ Set up the complete Hanzo platform in this Claude Code session using native Clau
 
 1. Progressive instructions: fetch https://hanzoskills.com/CLAUDE.md and append to ./CLAUDE.md (and ~/.claude/CLAUDE.md for every repo).
 2. Native Hanzo MCP: run `claude mcp add --scope user hanzo -- npx -y hanzo mcp` (or hosted https://api.hanzo.ai/v1/mcp).
-3. Native CLI, Hanzo Dev & Hanzo Bot: install `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), sign in with `hanzo auth login` (or headless wallet signup via https://hanzoskills.com/hanzo.md), run `hanzo dev` or `npm i -g @hanzo/bot && hanzo-bot onboard --install-daemon` (cloud: https://hanzo.bot).
+3. Native CLI, Local Lifecycle, Hanzo Dev & Hanzo Bot: install `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), sign in with `hanzo auth login` (or headless wallet signup via https://hanzoskills.com/hanzo.md). Local stack lifecycle: `hanzo start`/`stop`/`restart` (runtime: VM, k3s), `hanzo up`/`down` (Cloud & apps; `down` keeps k3s warm), `hanzo ps`. Run `hanzo dev` or `npm i -g @hanzo/bot && hanzo-bot onboard --install-daemon` (cloud: https://hanzo.bot). Build custom apps with `@hanzo/mod` (https://docs.hanzo.ai/docs/apps/mods).
 4. Browser Extension (Chrome/Firefox/Safari/Edge): install from https://hanzo.ai/extension (or https://github.com/hanzoai/extension/releases/latest) so MCP browser/computer tools bridge live tabs.
 5. Progressive skills (never load /all.md): read https://hanzoskills.com/llms.txt -> /categories/<slug>.md -> save ONLY needed skills to ~/.claude/skills/<name>/SKILL.md.
 6. Forge OSS repos: browse https://hanzoskills.com/oss/index.md -> /oss/<org>.md -> clone from https://forge.hanzo.ai/<org>/<repo>.git.
@@ -67,7 +67,7 @@ Set up the complete Hanzo platform in this Codex session using native Codex conf
 
 1. Progressive instructions: fetch https://hanzoskills.com/AGENTS.md and append to ./AGENTS.md (and ~/.codex/AGENTS.md for every project).
 2. Native Hanzo MCP: run `codex mcp add hanzo -- npx -y hanzo mcp` (or hosted https://api.hanzo.ai/v1/mcp).
-3. Native CLI, Hanzo Dev & Hanzo Bot: install `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), `hanzo auth login` (or headless signup via https://hanzoskills.com/hanzo.md), `hanzo dev`, and `npm i -g @hanzo/bot` (cloud: https://hanzo.bot).
+3. Native CLI, Local Lifecycle, Hanzo Dev & Hanzo Bot: install `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), `hanzo auth login`, `hanzo start`/`stop` (runtime), `hanzo up`/`down`/`ps` (Cloud & apps), `hanzo dev`, and `npm i -g @hanzo/bot` (cloud: https://hanzo.bot). App SDK: `@hanzo/mod` (https://docs.hanzo.ai/docs/apps/mods).
 4. Browser Extension: install from https://hanzo.ai/extension (or https://github.com/hanzoai/extension/releases/latest) for live MCP browser/CDP automation.
 5. Progressive skills: fetch https://hanzoskills.com/llms.txt -> /categories/<slug>.md -> pull single skills on demand from https://hanzoskills.com/skills/<name>/SKILL.md. Browse Forge OSS via https://hanzoskills.com/oss/index.md.
 
